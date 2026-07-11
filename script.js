@@ -1,18 +1,17 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-folder-build-v1';
-  var VERSION = 1;
-
+  var SAVE_KEY = 'menu-menace-scratch-build-v2';
+  var VERSION = 2;
   var state = null;
   var saveAvailable = true;
 
   var orderTemplates = [
     'Hello, {M}! Can I get {DI} please? Thanks!',
-    'Hello! I\'d like {DI} with no {IC} please.',
+    'Hello! I\'d like {DI}{WITHOUT_PART} please.',
     'Heya friend! Could I please have {DC}{WITH_PART}?',
     'I\'ll have {DISH}{WITH_PART}.',
-    'May I please have {DI}, and I would appreciate it if you added {IC} to it. Thank you kindly.',
+    'May I please have {DI}, and I would appreciate it if you added {IC}. Thank you kindly.',
     'I NEED {I}, stat! Also, I would love it if you added {I2}.',
     'I just want {DC}. That\'s all.',
     'I\'ll just have {DI} and I\'ll get outta your hair.',
@@ -29,7 +28,7 @@
     'The {DISH} is really {DE}. I like it!',
     'The {DISH} is really {F}-forward. Great job.',
     'Ooh, so {DE}! Nice!',
-    'I think your {DISH} is kinda {DE}. It is a bit unusual, but somehow it is the best thing on the menu!',
+    'I think your {DISH} is kinda {DE}. It is a little unusual, but it works so well.',
     'I like how it is not too {LOW_DE}. Good job.',
     'The {F} really stood out in this dish and it balances well with the {I}.'
   ];
@@ -51,8 +50,8 @@
     { id: 'night', name: 'Night Market', cost: 8 }
   ];
 
-  function defaultState() {
-    return {
+  function starterState(blank) {
+    var base = {
       version: VERSION,
       restaurantName: 'Menu Menace',
       chefName: 'Chef',
@@ -63,38 +62,34 @@
       menuSlots: 5,
       currentTheme: 'classic',
       ownedThemes: ['classic'],
-      currentTrendId: 'spicy',
+      currentTrendId: null,
       trendStartedAt: Date.now(),
       currentOrder: null,
       dialogueText: '',
       dialogueHidden: true,
       pot: [],
-      flavors: [
-        { id: 'sweet', descriptor: 'sweet', form: 'sweetness' },
-        { id: 'savory', descriptor: 'savory', form: 'savory flavor' },
-        { id: 'spicy', descriptor: 'spicy', form: 'heat' },
-        { id: 'salty', descriptor: 'salty', form: 'saltiness' },
-        { id: 'earthy', descriptor: 'earthy', form: 'earthiness' },
-        { id: 'magical', descriptor: 'magical', form: 'magic' }
-      ],
-      ingredients: [
-        { id: 'dough', name: 'dough', collective: 'dough', flavors: { savory: 70, salty: 15 } },
-        { id: 'sauce', name: 'tomato sauce', collective: 'tomato sauce', flavors: { savory: 55, sweet: 25, salty: 10 } },
-        { id: 'cheese', name: 'cheese', collective: 'cheese', flavors: { savory: 45, salty: 35 } },
-        { id: 'pepperoni', name: 'pepperoni', collective: 'pepperoni slices', flavors: { savory: 35, spicy: 45, salty: 20 } },
-        { id: 'bun', name: 'bun', collective: 'buns', flavors: { savory: 45, sweet: 15 } },
-        { id: 'patty', name: 'burger patty', collective: 'burger patties', flavors: { savory: 85, salty: 15 } },
-        { id: 'pickles', name: 'pickle', collective: 'pickles', flavors: { salty: 55, earthy: 20 } },
-        { id: 'lettuce', name: 'lettuce', collective: 'lettuce', flavors: { earthy: 65 } },
-        { id: 'frosting', name: 'frosting', collective: 'frosting', flavors: { sweet: 90, magical: 10 } },
-        { id: 'sprinkles', name: 'sprinkle', collective: 'sprinkles', flavors: { sweet: 60, magical: 40 } }
-      ],
-      dishes: [
-        { id: 'pizza', name: 'pizza', category: 'Classics', kind: 'collective', price: 28, base: ['dough', 'sauce', 'cheese'], optional: ['pepperoni', 'sprinkles'] },
-        { id: 'hamburger', name: 'hamburger', category: 'Classics', kind: 'single', price: 25, base: ['bun', 'patty'], optional: ['cheese', 'pickles', 'lettuce'] },
-        { id: 'magic-cupcake', name: 'magic cupcake', category: 'Desserts', kind: 'single', price: 22, base: ['frosting', 'sprinkles'], optional: ['cheese'] }
-      ]
+      flavors: [],
+      ingredients: [],
+      dishes: []
     };
+
+    if (blank) return base;
+
+    base.flavors = [
+      { id: 'savory', descriptor: 'savory', form: 'savory flavor' },
+      { id: 'sweet', descriptor: 'sweet', form: 'sweetness' },
+      { id: 'fresh', descriptor: 'fresh', form: 'freshness' }
+    ];
+    base.ingredients = [
+      { id: 'pasta', name: 'pasta', collective: 'pasta', category: 'Starter spaghetti', flavors: { savory: 80 } },
+      { id: 'tomato-sauce', name: 'tomato sauce', collective: 'tomato sauce', category: 'Starter spaghetti', flavors: { savory: 60, sweet: 30 } },
+      { id: 'herbs', name: 'herbs', collective: 'herbs', category: 'Starter spaghetti', flavors: { fresh: 100 } }
+    ];
+    base.dishes = [
+      { id: 'spaghetti', name: 'spaghetti', category: 'Pasta', kind: 'collective', price: 20, base: ['pasta', 'tomato-sauce', 'herbs'], optional: [] }
+    ];
+    base.currentTrendId = 'savory';
+    return base;
   }
 
   function $(id) {
@@ -103,14 +98,21 @@
 
   function on(id, eventName, handler) {
     var el = $(id);
-    if (el) {
-      el.addEventListener(eventName, handler, false);
-    }
+    if (el) el.addEventListener(eventName, handler, false);
   }
 
   function safeText(value) {
     if (value === null || value === undefined) return '';
     return String(value);
+  }
+
+  function escapeHTML(text) {
+    return safeText(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function slugify(text) {
@@ -126,18 +128,34 @@
     return list[Math.floor(Math.random() * list.length)];
   }
 
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
+  function unique(list) {
+    var result = [];
+    for (var i = 0; i < list.length; i++) {
+      if (result.indexOf(list[i]) === -1) result.push(list[i]);
+    }
+    return result;
+  }
+
+  function uniqueId(base, existing) {
+    var id = base || 'item';
+    var n = 2;
+    while (existing.indexOf(id) !== -1) {
+      id = base + '-' + n;
+      n++;
+    }
+    return id;
   }
 
   function showStatus(message) {
     var el = $('status-message');
     if (!el) return;
-    el.textContent = message;
+    el.textContent = message || '';
     window.clearTimeout(showStatus.timer);
-    showStatus.timer = window.setTimeout(function () {
-      el.textContent = '';
-    }, 4500);
+    if (message) {
+      showStatus.timer = window.setTimeout(function () {
+        el.textContent = '';
+      }, 5200);
+    }
   }
 
   function showError(message) {
@@ -172,39 +190,68 @@
     }
 
     if (!loaded) {
-      state = defaultState();
+      state = starterState(false);
       return;
     }
 
     try {
-      state = mergeWithDefaults(JSON.parse(loaded));
+      state = mergeWithBase(JSON.parse(loaded));
     } catch (err2) {
-      state = defaultState();
-      showError('Your old save could not be loaded, so Menu Menace started fresh. You can still import a save file from Settings.');
+      state = starterState(false);
+      showError('Your save could not be loaded, so Menu Menace started with the spaghetti example. You can still import a save from Settings.');
     }
   }
 
-  function mergeWithDefaults(saved) {
-    var base = defaultState();
-    if (!saved || typeof saved !== 'object') return base;
+  function mergeWithBase(saved) {
+    var base = starterState(true);
+    if (!saved || typeof saved !== 'object') return starterState(false);
 
-    var merged = base;
     var keys = Object.keys(saved);
-    for (var i = 0; i < keys.length; i++) {
-      merged[keys[i]] = saved[keys[i]];
+    for (var i = 0; i < keys.length; i++) base[keys[i]] = saved[keys[i]];
+
+    if (!Array.isArray(base.flavors)) base.flavors = [];
+    if (!Array.isArray(base.ingredients)) base.ingredients = [];
+    if (!Array.isArray(base.dishes)) base.dishes = [];
+    if (!Array.isArray(base.ownedThemes) || !base.ownedThemes.length) base.ownedThemes = ['classic'];
+    if (!Array.isArray(base.pot)) base.pot = [];
+    if (!base.currentTheme) base.currentTheme = 'classic';
+    if (typeof base.dialogueText !== 'string') base.dialogueText = '';
+    if (typeof base.dialogueHidden !== 'boolean') base.dialogueHidden = true;
+    if (!base.trendStartedAt) base.trendStartedAt = Date.now();
+
+    for (var f = 0; f < base.flavors.length; f++) {
+      if (!base.flavors[f].id) base.flavors[f].id = uniqueId(slugify(base.flavors[f].descriptor || 'flavor'), []);
+      if (!base.flavors[f].form) base.flavors[f].form = base.flavors[f].descriptor || 'flavor';
+      if (!base.flavors[f].descriptor) base.flavors[f].descriptor = base.flavors[f].form || 'flavor';
     }
 
-    if (!Array.isArray(merged.flavors) || merged.flavors.length === 0) merged.flavors = base.flavors;
-    if (!Array.isArray(merged.ingredients) || merged.ingredients.length === 0) merged.ingredients = base.ingredients;
-    if (!Array.isArray(merged.dishes) || merged.dishes.length === 0) merged.dishes = base.dishes;
-    if (!Array.isArray(merged.ownedThemes) || merged.ownedThemes.length === 0) merged.ownedThemes = ['classic'];
-    if (!Array.isArray(merged.pot)) merged.pot = [];
-    if (typeof merged.dialogueText !== 'string') merged.dialogueText = '';
-    if (typeof merged.dialogueHidden !== 'boolean') merged.dialogueHidden = true;
-    if (!merged.currentTheme) merged.currentTheme = 'classic';
-    if (!merged.currentTrendId) merged.currentTrendId = merged.flavors[0].id;
-    if (!merged.trendStartedAt) merged.trendStartedAt = Date.now();
-    return merged;
+    for (var g = 0; g < base.ingredients.length; g++) {
+      if (!base.ingredients[g].id) base.ingredients[g].id = uniqueId(slugify(base.ingredients[g].name || 'ingredient'), []);
+      if (!base.ingredients[g].name) base.ingredients[g].name = 'ingredient';
+      if (!base.ingredients[g].collective) base.ingredients[g].collective = base.ingredients[g].name;
+      if (!base.ingredients[g].category) base.ingredients[g].category = 'Ingredients';
+      if (!base.ingredients[g].flavors || typeof base.ingredients[g].flavors !== 'object') base.ingredients[g].flavors = {};
+    }
+
+    for (var d = 0; d < base.dishes.length; d++) {
+      if (!base.dishes[d].id) base.dishes[d].id = uniqueId(slugify(base.dishes[d].name || 'dish'), []);
+      if (!base.dishes[d].name) base.dishes[d].name = 'dish';
+      if (!base.dishes[d].category) base.dishes[d].category = 'Menu';
+      if (!base.dishes[d].kind) base.dishes[d].kind = 'single';
+      if (!Array.isArray(base.dishes[d].base)) base.dishes[d].base = [];
+      if (!Array.isArray(base.dishes[d].optional)) base.dishes[d].optional = [];
+      if (!base.dishes[d].price) base.dishes[d].price = 20;
+    }
+
+    if (base.currentTrendId && !getFlavorFrom(base.flavors, base.currentTrendId)) {
+      base.currentTrendId = base.flavors.length ? base.flavors[0].id : null;
+    }
+    return base;
+  }
+
+  function getFlavorFrom(list, id) {
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
   }
 
   function init() {
@@ -226,9 +273,12 @@
       }, false);
     }
 
+    on('quick-customer', 'click', newCustomer);
     on('reroll-trend', 'click', function () { chooseNewTrend(true); });
     on('new-customer', 'click', newCustomer);
     on('go-kitchen', 'click', function () { switchTab('kitchen'); });
+    on('jump-build-dish', 'click', function () { switchTab('customize'); openDetails('dish-builder'); });
+    on('jump-build-ingredient', 'click', function () { switchTab('customize'); openDetails('ingredient-builder'); });
     on('close-bubble', 'click', function () {
       state.dialogueHidden = true;
       saveGame();
@@ -245,12 +295,11 @@
     on('export-save', 'click', exportSave);
     on('copy-save-text', 'click', copySaveText);
     on('import-save-text', 'click', importSaveText);
-    on('reset-game', 'click', resetGame);
+    on('reset-starter', 'click', resetStarter);
+    on('start-blank', 'click', startBlank);
 
     var importInput = $('import-save');
-    if (importInput) {
-      importInput.addEventListener('change', importSaveFile, false);
-    }
+    if (importInput) importInput.addEventListener('change', importSaveFile, false);
 
     var pot = $('pot');
     if (pot) {
@@ -270,24 +319,55 @@
     }
   }
 
+  function openDetails(id) {
+    var details = $(id);
+    if (details) details.open = true;
+  }
+
   function switchTab(tabId) {
     var panels = document.querySelectorAll('.tab-panel');
     var i;
-    for (i = 0; i < panels.length; i++) {
-      panels[i].hidden = panels[i].id !== tabId;
-    }
-
+    for (i = 0; i < panels.length; i++) panels[i].hidden = panels[i].id !== tabId;
     var buttons = document.querySelectorAll('.tab-button');
     for (i = 0; i < buttons.length; i++) {
       buttons[i].setAttribute('aria-selected', buttons[i].getAttribute('data-tab') === tabId ? 'true' : 'false');
     }
+    window.scrollTo(0, 0);
   }
 
   function saveAndRender(message) {
     hideError();
+    sanitizeStateAfterChanges();
     saveGame();
     renderAll();
     if (message) showStatus(message);
+    if (!saveAvailable) showError('Autosave may be blocked in this browser preview. Export your save from Settings when you are done.');
+  }
+
+  function sanitizeStateAfterChanges() {
+    var ingredientIds = state.ingredients.map(function (item) { return item.id; });
+    var dishIds = state.dishes.map(function (item) { return item.id; });
+
+    for (var i = 0; i < state.dishes.length; i++) {
+      state.dishes[i].base = unique((state.dishes[i].base || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; }));
+      state.dishes[i].optional = unique((state.dishes[i].optional || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1 && state.dishes[i].base.indexOf(id) === -1; }));
+    }
+
+    state.pot = (state.pot || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
+
+    if (state.currentOrder && dishIds.indexOf(state.currentOrder.dishId) === -1) {
+      state.currentOrder = null;
+      state.pot = [];
+    }
+
+    if (state.currentOrder) {
+      state.currentOrder.required = (state.currentOrder.required || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
+      state.currentOrder.excluded = (state.currentOrder.excluded || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
+    }
+
+    if (state.currentTrendId && !getFlavor(state.currentTrendId)) {
+      state.currentTrendId = state.flavors.length ? state.flavors[0].id : null;
+    }
   }
 
   function renderAll() {
@@ -297,17 +377,17 @@
     renderMenu();
     renderKitchen();
     renderCustomize();
-    renderThemes();
+    renderSettings();
     applyTheme();
   }
 
   function renderStatsAndHeader() {
     $('game-title').textContent = state.restaurantName || 'Menu Menace';
     $('chef-line').textContent = 'Chef: ' + (state.chefName || 'Chef');
-    $('coins-stat').textContent = Math.floor(state.coins);
-    $('gems-stat').textContent = Math.floor(state.gems);
-    $('level-stat').textContent = state.level;
-    $('xp-stat').textContent = state.xp + ' / ' + xpToNextLevel();
+    $('coins-stat').textContent = Math.floor(state.coins || 0);
+    $('gems-stat').textContent = Math.floor(state.gems || 0);
+    $('level-stat').textContent = state.level || 1;
+    $('xp-stat').textContent = (state.xp || 0) + ' / ' + xpToNextLevel();
     $('slot-stat').textContent = state.dishes.length + ' / ' + state.menuSlots;
   }
 
@@ -320,47 +400,55 @@
 
   function maybeRefreshTrend() {
     var fifteenMinutes = 15 * 60 * 1000;
-    if (!state.trendStartedAt || Date.now() - state.trendStartedAt >= fifteenMinutes) {
+    if (!state.flavors.length) {
+      state.currentTrendId = null;
+      return;
+    }
+    if (!state.currentTrendId || !state.trendStartedAt || Date.now() - state.trendStartedAt >= fifteenMinutes) {
       chooseNewTrend(false);
     }
   }
 
   function chooseNewTrend(showMessage) {
-    if (!state.flavors.length) return;
+    if (!state.flavors.length) {
+      state.currentTrendId = null;
+      state.trendStartedAt = Date.now();
+      saveAndRender(showMessage ? 'Create a flavor first, then trends can start.' : '');
+      return;
+    }
+
     var next = randomItem(state.flavors).id;
     if (state.flavors.length > 1) {
-      while (next === state.currentTrendId) {
-        next = randomItem(state.flavors).id;
-      }
+      while (next === state.currentTrendId) next = randomItem(state.flavors).id;
     }
     state.currentTrendId = next;
     state.trendStartedAt = Date.now();
-    saveAndRender(showMessage ? 'New trend picked!' : '');
+    saveAndRender(showMessage ? 'New trend picked from your flavor profiles!' : '');
   }
 
   function renderTrend() {
-    var flavor = getFlavor(state.currentTrendId) || state.flavors[0];
-    $('trend-text').textContent = flavor ? flavor.descriptor + ' dishes' : 'anything delicious';
+    var flavor = getFlavor(state.currentTrendId);
+    if (!flavor) {
+      $('trend-text').textContent = 'No trend yet';
+      $('trend-help').textContent = 'Create at least one flavor profile in Build to start trends.';
+      return;
+    }
+    $('trend-text').textContent = flavor.descriptor + ' dishes';
+    $('trend-help').textContent = 'A dish with at least 50% ' + flavor.form + ' gets a bonus tip. Trends only use your flavor list.';
   }
 
   function getFlavor(id) {
-    for (var i = 0; i < state.flavors.length; i++) {
-      if (state.flavors[i].id === id) return state.flavors[i];
-    }
+    for (var i = 0; i < state.flavors.length; i++) if (state.flavors[i].id === id) return state.flavors[i];
     return null;
   }
 
   function getIngredient(id) {
-    for (var i = 0; i < state.ingredients.length; i++) {
-      if (state.ingredients[i].id === id) return state.ingredients[i];
-    }
+    for (var i = 0; i < state.ingredients.length; i++) if (state.ingredients[i].id === id) return state.ingredients[i];
     return null;
   }
 
   function getDish(id) {
-    for (var i = 0; i < state.dishes.length; i++) {
-      if (state.dishes[i].id === id) return state.dishes[i];
-    }
+    for (var i = 0; i < state.dishes.length; i++) if (state.dishes[i].id === id) return state.dishes[i];
     return null;
   }
 
@@ -386,9 +474,10 @@
   }
 
   function newCustomer() {
-    if (state.dishes.length === 0) {
+    if (!state.dishes.length) {
       showStatus('Add a dish first so customers have something to order.');
       switchTab('customize');
+      openDetails('dish-builder');
       return;
     }
 
@@ -397,9 +486,7 @@
     var excluded = [];
     var optional = Array.isArray(dish.optional) ? dish.optional.slice() : [];
 
-    if (optional.length > 0 && Math.random() < 0.65) {
-      required.push(randomItem(optional));
-    }
+    if (optional.length > 0 && Math.random() < 0.65) required.push(randomItem(optional));
     if (optional.length > 0 && Math.random() < 0.45) {
       var avoid = randomItem(optional);
       if (required.indexOf(avoid) === -1) excluded.push(avoid);
@@ -448,18 +535,9 @@
   function randomOptionalIngredient(dish, notThis) {
     var pool = dish && Array.isArray(dish.optional) && dish.optional.length ? dish.optional.slice() : [];
     if (pool.length === 0) pool = state.ingredients.map(function (x) { return x.id; });
-    if (notThis && pool.length > 1) {
-      pool = pool.filter(function (id) { return id !== notThis; });
-    }
+    if (pool.length === 0) return null;
+    if (notThis && pool.length > 1) pool = pool.filter(function (id) { return id !== notThis; });
     return randomItem(pool);
-  }
-
-  function unique(list) {
-    var result = [];
-    for (var i = 0; i < list.length; i++) {
-      if (result.indexOf(list[i]) === -1) result.push(list[i]);
-    }
-    return result;
   }
 
   function showCustomerBubble(text) {
@@ -490,40 +568,64 @@
     var container = $('menu-list');
     container.innerHTML = '';
     if (!state.dishes.length) {
-      container.textContent = 'Your menu is empty. Add a dish in Customize.';
+      container.innerHTML = '<p class="muted">Your menu is empty. Go to Build and add your first dish.</p>';
       return;
     }
 
-    var grouped = {};
-    for (var i = 0; i < state.dishes.length; i++) {
-      var dish = state.dishes[i];
-      var cat = dish.category || 'Menu';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(dish);
-    }
-
+    var grouped = groupBy(state.dishes, function (dish) { return dish.category || 'Menu'; });
     var cats = Object.keys(grouped).sort();
     for (var c = 0; c < cats.length; c++) {
-      var section = document.createElement('section');
-      section.className = 'dish-card';
-      var h = document.createElement('h3');
-      h.textContent = cats[c];
-      section.appendChild(h);
-
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var content = document.createElement('div');
+      content.className = 'accordion-content';
       for (var d = 0; d < grouped[cats[c]].length; d++) {
-        var item = grouped[cats[c]][d];
-        var p = document.createElement('p');
-        var baseNames = item.base.map(function (id) { return ingredientName(id, true); }).join(', ');
-        var optionalNames = item.optional.map(function (id) { return ingredientName(id, true); }).join(', ');
-        p.innerHTML = '<strong>' + escapeHTML(item.name) + '</strong><br>Price: ' + item.price + ' coins<br>Base: ' + escapeHTML(baseNames || 'nothing yet') + '<br>Optional: ' + escapeHTML(optionalNames || 'none');
-        section.appendChild(p);
+        content.appendChild(makeDishDetails(grouped[cats[c]][d], false));
       }
-      container.appendChild(section);
+      details.appendChild(content);
+      container.appendChild(details);
     }
   }
 
-  function escapeHTML(text) {
-    return safeText(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  function makeDishDetails(dish, includeRemove) {
+    var details = makeDetails(dish.name + ' • ' + dish.price + ' coins', 'dish-detail', false);
+    var body = document.createElement('div');
+    body.className = 'dish-body';
+    var baseNames = (dish.base || []).map(function (id) { return ingredientName(id, true); }).join(', ');
+    var optionalNames = (dish.optional || []).map(function (id) { return ingredientName(id, true); }).join(', ');
+    body.innerHTML = '<p><strong>Wording:</strong> ' + escapeHTML(dishPhrase(dish)) + '</p>' +
+      '<p><strong>Base recipe:</strong> ' + escapeHTML(baseNames || 'nothing yet') + '</p>' +
+      '<p><strong>Optional:</strong> ' + escapeHTML(optionalNames || 'none') + '</p>';
+    if (includeRemove) {
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'danger compact';
+      remove.textContent = 'Remove dish';
+      remove.setAttribute('data-id', dish.id);
+      remove.addEventListener('click', function () { removeDish(this.getAttribute('data-id')); }, false);
+      body.appendChild(remove);
+    }
+    details.appendChild(body);
+    return details;
+  }
+
+  function groupBy(list, callback) {
+    var grouped = {};
+    for (var i = 0; i < list.length; i++) {
+      var key = callback(list[i]) || 'Other';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(list[i]);
+    }
+    return grouped;
+  }
+
+  function makeDetails(title, className, open) {
+    var details = document.createElement('details');
+    details.className = className;
+    if (open) details.open = true;
+    var summary = document.createElement('summary');
+    summary.textContent = title;
+    details.appendChild(summary);
+    return details;
   }
 
   function renderKitchen() {
@@ -538,7 +640,7 @@
     helper.innerHTML = '';
 
     if (!state.currentOrder) {
-      text.textContent = 'No active order yet. Go to Front Counter and invite a customer.';
+      text.textContent = 'No active order yet. Go to Counter and invite a customer.';
       return;
     }
 
@@ -549,7 +651,7 @@
 
     var html = '<h3>Recipe helper</h3><ul>';
     html += '<li>Main dish: ' + escapeHTML(dishPhrase(dish)) + '</li>';
-    html += '<li>Needed: ' + escapeHTML(expected.map(function (id) { return ingredientName(id, true); }).join(', ')) + '</li>';
+    html += '<li>Needed: ' + escapeHTML(expected.length ? expected.map(function (id) { return ingredientName(id, true); }).join(', ') : 'nothing yet') + '</li>';
     html += '<li>Avoid: ' + escapeHTML(excluded.length ? excluded.map(function (id) { return ingredientName(id, true); }).join(', ') : 'nothing special') + '</li>';
     html += '</ul>';
     helper.innerHTML = html;
@@ -570,10 +672,10 @@
       var id = state.pot[i];
       var tag = document.createElement('span');
       tag.className = 'tag';
-      tag.textContent = ingredientName(id, false) + ' ';
+      tag.appendChild(document.createTextNode(ingredientName(id, false) + ' '));
       var remove = document.createElement('button');
       remove.type = 'button';
-      remove.className = 'small';
+      remove.className = 'secondary compact';
       remove.textContent = 'remove';
       remove.setAttribute('aria-label', 'Remove ' + ingredientName(id, false));
       remove.setAttribute('data-index', i);
@@ -590,21 +692,31 @@
   function renderIngredientButtons() {
     var container = $('ingredient-buttons');
     container.innerHTML = '';
-    for (var i = 0; i < state.ingredients.length; i++) {
-      var ingredient = state.ingredients[i];
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'ingredient-card';
-      btn.draggable = true;
-      btn.setAttribute('data-id', ingredient.id);
-      btn.innerHTML = '<strong>' + escapeHTML(ingredient.name) + '</strong><br><span class="muted">' + escapeHTML(flavorSummary(ingredient.flavors)) + '</span>';
-      btn.addEventListener('click', function () {
-        addToPot(this.getAttribute('data-id'));
-      }, false);
-      btn.addEventListener('dragstart', function (event) {
-        event.dataTransfer.setData('text/plain', this.getAttribute('data-id'));
-      }, false);
-      container.appendChild(btn);
+    if (!state.ingredients.length) {
+      container.innerHTML = '<p class="muted">No ingredients yet. Build one first.</p>';
+      return;
+    }
+
+    var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
+    var cats = Object.keys(grouped).sort();
+    for (var c = 0; c < cats.length; c++) {
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var content = document.createElement('div');
+      content.className = 'accordion-content ingredient-grid';
+      for (var i = 0; i < grouped[cats[c]].length; i++) {
+        var ingredient = grouped[cats[c]][i];
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ingredient-card';
+        btn.draggable = true;
+        btn.setAttribute('data-id', ingredient.id);
+        btn.innerHTML = '<strong>' + escapeHTML(ingredient.name) + '</strong><br><span class="muted">' + escapeHTML(flavorSummary(ingredient.flavors)) + '</span>';
+        btn.addEventListener('click', function () { addToPot(this.getAttribute('data-id')); }, false);
+        btn.addEventListener('dragstart', function (event) { event.dataTransfer.setData('text/plain', this.getAttribute('data-id')); }, false);
+        content.appendChild(btn);
+      }
+      details.appendChild(content);
+      container.appendChild(details);
     }
   }
 
@@ -614,9 +726,7 @@
     var keys = Object.keys(normalized).sort(function (a, b) { return normalized[b] - normalized[a]; });
     for (var i = 0; i < keys.length && i < 3; i++) {
       var flavor = getFlavor(keys[i]);
-      if (flavor && normalized[keys[i]] > 0) {
-        parts.push(flavor.descriptor + ' ' + Math.round(normalized[keys[i]]) + '%');
-      }
+      if (flavor && normalized[keys[i]] > 0) parts.push(flavor.descriptor + ' ' + Math.round(normalized[keys[i]]) + '%');
     }
     return parts.length ? parts.join(', ') : 'neutral';
   }
@@ -624,15 +734,15 @@
   function normalizeFlavorMap(map) {
     var result = {};
     var total = 0;
-    var keys = Object.keys(map);
+    var keys = Object.keys(map || {});
     for (var i = 0; i < keys.length; i++) {
       var amount = Number(map[keys[i]]) || 0;
-      if (amount > 0) total += amount;
+      if (amount > 0 && getFlavor(keys[i])) total += amount;
     }
     if (total <= 0) return result;
     for (var j = 0; j < keys.length; j++) {
       var val = Number(map[keys[j]]) || 0;
-      if (val > 0) result[keys[j]] = (val / total) * 100;
+      if (val > 0 && getFlavor(keys[j])) result[keys[j]] = (val / total) * 100;
     }
     return result;
   }
@@ -674,16 +784,11 @@
     var extras = [];
     var i;
 
-    for (i = 0; i < expected.length; i++) {
-      if (pot.indexOf(expected[i]) === -1) missing.push(expected[i]);
-    }
-
-    for (i = 0; i < pot.length; i++) {
-      if (expected.indexOf(pot[i]) === -1 || excluded.indexOf(pot[i]) !== -1) extras.push(pot[i]);
-    }
+    for (i = 0; i < expected.length; i++) if (pot.indexOf(expected[i]) === -1) missing.push(expected[i]);
+    for (i = 0; i < pot.length; i++) if (expected.indexOf(pot[i]) === -1 || excluded.indexOf(pot[i]) !== -1) extras.push(pot[i]);
 
     var mistakeCount = missing.length + extras.length;
-    var basePay = Number(dish.price) || 20;
+    var basePay = dish ? Number(dish.price) || 20 : 20;
     var ingredientPay = pot.length * 5;
     var trendBonus = isTrendingDish(pot) ? Math.ceil(basePay * 0.35) : 0;
     var deduction = Math.min(0.55, mistakeCount * 0.15);
@@ -702,8 +807,9 @@
   }
 
   function isTrendingDish(pot) {
+    if (!state.currentTrendId) return false;
     var finalFlavors = finalFlavorProfile(pot);
-    return finalFlavors[state.currentTrendId] >= 50;
+    return (finalFlavors[state.currentTrendId] || 0) >= 50;
   }
 
   function finalFlavorProfile(ingredientIds) {
@@ -722,16 +828,14 @@
     }
     if (count <= 0) return {};
     var finalKeys = Object.keys(totals);
-    for (var j = 0; j < finalKeys.length; j++) {
-      totals[finalKeys[j]] = totals[finalKeys[j]] / count;
-    }
+    for (var j = 0; j < finalKeys.length; j++) totals[finalKeys[j]] = totals[finalKeys[j]] / count;
     return totals;
   }
 
   function buildFeedback(dish, pot, missing, extras, total, xpGain, trendBonus) {
     var finalFlavors = finalFlavorProfile(pot);
     var sorted = Object.keys(finalFlavors).sort(function (a, b) { return finalFlavors[b] - finalFlavors[a]; });
-    var top = getFlavor(sorted[0]) || state.flavors[0];
+    var top = getFlavor(sorted[0]);
     var second = getFlavor(sorted[1]) || top;
     var low = findLowFlavor(finalFlavors) || top;
     var hasMistakes = missing.length || extras.length;
@@ -753,38 +857,30 @@
   }
 
   function findLowFlavor(finalFlavors) {
+    if (!state.flavors.length) return null;
     for (var i = 0; i < state.flavors.length; i++) {
-      var id = state.flavors[i].id;
-      if (!finalFlavors[id] || finalFlavors[id] < 5) return state.flavors[i];
+      if (!finalFlavors[state.flavors[i].id] || finalFlavors[state.flavors[i].id] < 5) return state.flavors[i];
     }
-    return null;
-  }
-
-  function xpToNextLevel() {
-    return 30 + (state.level - 1) * 20;
+    return state.flavors[0];
   }
 
   function gainXP(amount) {
     state.xp += amount;
-    var leveled = false;
     while (state.xp >= xpToNextLevel()) {
       state.xp -= xpToNextLevel();
       state.level += 1;
       state.gems += state.level;
-      leveled = true;
-    }
-    if (leveled) {
-      window.setTimeout(function () {
-        showStatus('Level up! You are now level ' + state.level + ' and got ' + state.level + ' gems.');
-      }, 100);
+      state.coins += 10;
     }
   }
 
+  function xpToNextLevel() {
+    return 30 + ((state.level || 1) - 1) * 12;
+  }
+
   function renderCustomize() {
-    $('restaurant-name').value = state.restaurantName || 'Menu Menace';
-    $('chef-name').value = state.chefName || 'Chef';
-    $('slot-info').textContent = 'You are using ' + state.dishes.length + ' of ' + state.menuSlots + ' menu slots. Next slot costs ' + nextSlotCost() + ' coins.';
-    $('buy-slot').disabled = state.coins < nextSlotCost();
+    $('restaurant-name').value = state.restaurantName || '';
+    $('chef-name').value = state.chefName || '';
     renderFlavorList();
     renderIngredientFlavorInputs();
     renderIngredientManageList();
@@ -798,29 +894,25 @@
     saveAndRender('Names saved.');
   }
 
-  function nextSlotCost() {
-    return 30 + (state.menuSlots - 5) * 20;
-  }
-
-  function buySlot() {
-    var cost = nextSlotCost();
-    if (state.coins < cost) {
-      showStatus('Not enough coins for the next menu slot yet.');
-      return;
-    }
-    state.coins -= cost;
-    state.menuSlots += 1;
-    saveAndRender('Bought a new menu slot!');
-  }
-
   function renderFlavorList() {
     var container = $('flavor-list');
     container.innerHTML = '';
+    if (!state.flavors.length) {
+      container.innerHTML = '<p class="muted">No flavors yet. Add one to unlock trends and ingredient flavor amounts.</p>';
+      return;
+    }
     for (var i = 0; i < state.flavors.length; i++) {
       var flavor = state.flavors[i];
       var div = document.createElement('div');
-      div.className = 'pill';
-      div.textContent = flavor.descriptor + ' / ' + flavor.form;
+      div.className = 'manage-item';
+      div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(flavor.descriptor) + '</strong><br><span class="muted">noun form: ' + escapeHTML(flavor.form) + '</span></div>';
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'danger compact';
+      button.textContent = 'Remove';
+      button.setAttribute('data-id', flavor.id);
+      button.addEventListener('click', function () { removeFlavor(this.getAttribute('data-id')); }, false);
+      div.appendChild(button);
       container.appendChild(div);
     }
   }
@@ -832,20 +924,34 @@
       showStatus('Add both a descriptor and noun form.');
       return;
     }
-    var id = slugify(descriptor);
-    if (getFlavor(id)) {
-      showStatus('That flavor already exists.');
-      return;
-    }
+    var id = uniqueId(slugify(descriptor), state.flavors.map(function (x) { return x.id; }));
     state.flavors.push({ id: id, descriptor: descriptor, form: form });
+    if (!state.currentTrendId) state.currentTrendId = id;
     $('new-flavor-descriptor').value = '';
     $('new-flavor-form').value = '';
-    saveAndRender('Flavor added.');
+    saveAndRender('Flavor added. Trends can pick it now.');
+  }
+
+  function removeFlavor(id) {
+    var flavor = getFlavor(id);
+    if (!flavor) return;
+    var ok = window.confirm('Remove the flavor "' + flavor.descriptor + '"? It will also be removed from ingredient flavor amounts.');
+    if (!ok) return;
+    state.flavors = state.flavors.filter(function (item) { return item.id !== id; });
+    for (var i = 0; i < state.ingredients.length; i++) {
+      if (state.ingredients[i].flavors) delete state.ingredients[i].flavors[id];
+    }
+    if (state.currentTrendId === id) state.currentTrendId = state.flavors.length ? state.flavors[0].id : null;
+    saveAndRender('Flavor removed.');
   }
 
   function renderIngredientFlavorInputs() {
     var container = $('ingredient-flavor-inputs');
     container.innerHTML = '';
+    if (!state.flavors.length) {
+      container.innerHTML = '<p class="muted">Add a flavor profile first.</p>';
+      return;
+    }
     for (var i = 0; i < state.flavors.length; i++) {
       var flavor = state.flavors[i];
       var label = document.createElement('label');
@@ -863,8 +969,14 @@
   }
 
   function addIngredient() {
+    if (!state.flavors.length) {
+      showStatus('Create at least one flavor profile before making ingredients.');
+      openDetails('flavor-builder');
+      return;
+    }
     var name = $('new-ingredient-name').value.trim();
     var collective = $('new-ingredient-collective').value.trim() || name;
+    var category = $('new-ingredient-category').value.trim() || 'Ingredients';
     if (!name) {
       showStatus('Name the ingredient first.');
       return;
@@ -880,32 +992,53 @@
       showStatus('Give the ingredient at least one flavor amount.');
       return;
     }
-    state.ingredients.push({ id: id, name: name, collective: collective, flavors: flavors });
+    state.ingredients.push({ id: id, name: name, collective: collective, category: category, flavors: flavors });
     $('new-ingredient-name').value = '';
     $('new-ingredient-collective').value = '';
     saveAndRender('Ingredient added.');
   }
 
-  function uniqueId(base, existing) {
-    var id = base;
-    var n = 2;
-    while (existing.indexOf(id) !== -1) {
-      id = base + '-' + n;
-      n++;
-    }
-    return id;
-  }
-
   function renderIngredientManageList() {
     var container = $('ingredient-manage-list');
     container.innerHTML = '';
-    for (var i = 0; i < state.ingredients.length; i++) {
-      var ing = state.ingredients[i];
-      var div = document.createElement('div');
-      div.className = 'manage-item';
-      div.innerHTML = '<strong>' + escapeHTML(ing.name) + '</strong><br><span class="muted">' + escapeHTML(flavorSummary(ing.flavors)) + '</span>';
-      container.appendChild(div);
+    if (!state.ingredients.length) {
+      container.innerHTML = '<p class="muted">No ingredients yet.</p>';
+      return;
     }
+    var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
+    var cats = Object.keys(grouped).sort();
+    for (var c = 0; c < cats.length; c++) {
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var content = document.createElement('div');
+      content.className = 'accordion-content manage-list';
+      for (var i = 0; i < grouped[cats[c]].length; i++) content.appendChild(makeIngredientManageItem(grouped[cats[c]][i]));
+      details.appendChild(content);
+      container.appendChild(details);
+    }
+  }
+
+  function makeIngredientManageItem(ing) {
+    var div = document.createElement('div');
+    div.className = 'manage-item';
+    div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(ing.name) + '</strong><br><span class="muted">' + escapeHTML(flavorSummary(ing.flavors)) + '</span></div>';
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'danger compact';
+    button.textContent = 'Remove';
+    button.setAttribute('data-id', ing.id);
+    button.addEventListener('click', function () { removeIngredient(this.getAttribute('data-id')); }, false);
+    div.appendChild(button);
+    return div;
+  }
+
+  function removeIngredient(id) {
+    var ing = getIngredient(id);
+    if (!ing) return;
+    var ok = window.confirm('Remove "' + ing.name + '"? It will be removed from recipes too.');
+    if (!ok) return;
+    state.ingredients = state.ingredients.filter(function (item) { return item.id !== id; });
+    state.pot = state.pot.filter(function (item) { return item !== id; });
+    saveAndRender('Ingredient removed.');
   }
 
   function renderDishIngredientChecks() {
@@ -913,6 +1046,11 @@
     var optional = $('dish-optional-ingredients');
     base.innerHTML = '';
     optional.innerHTML = '';
+    if (!state.ingredients.length) {
+      base.innerHTML = '<p class="muted">Create ingredients first.</p>';
+      optional.innerHTML = '<p class="muted">Create ingredients first.</p>';
+      return;
+    }
     for (var i = 0; i < state.ingredients.length; i++) {
       base.appendChild(makeCheckRow('base-ingredient-check', state.ingredients[i]));
       optional.appendChild(makeCheckRow('optional-ingredient-check', state.ingredients[i]));
@@ -940,13 +1078,18 @@
       showStatus('Name the dish first.');
       return;
     }
+    if (!state.ingredients.length) {
+      showStatus('Create ingredients before making a dish.');
+      openDetails('ingredient-builder');
+      return;
+    }
     if (state.dishes.length >= state.menuSlots) {
       showStatus('You need another menu slot before adding this dish.');
       return;
     }
     var base = checkedValues('.base-ingredient-check');
     var optional = checkedValues('.optional-ingredient-check');
-    if (base.length === 0) {
+    if (!base.length) {
       showStatus('Pick at least one base ingredient.');
       return;
     }
@@ -962,46 +1105,65 @@
   function checkedValues(selector) {
     var result = [];
     var checks = document.querySelectorAll(selector);
-    for (var i = 0; i < checks.length; i++) {
-      if (checks[i].checked) result.push(checks[i].value);
-    }
+    for (var i = 0; i < checks.length; i++) if (checks[i].checked) result.push(checks[i].value);
     return result;
   }
 
   function renderDishManageList() {
     var container = $('dish-manage-list');
     container.innerHTML = '';
-    for (var i = 0; i < state.dishes.length; i++) {
-      var dish = state.dishes[i];
-      var div = document.createElement('div');
-      div.className = 'manage-item';
-      var removeButton = '';
-      if (state.dishes.length > 1) {
-        removeButton = '<button type="button" class="small danger remove-dish-button" data-id="' + escapeHTML(dish.id) + '">Remove</button>';
-      }
-      div.innerHTML = '<strong>' + escapeHTML(dish.name) + '</strong><br><span class="muted">' + escapeHTML(dish.category || 'Menu') + ', ' + dish.price + ' coins</span><br>' + removeButton;
-      container.appendChild(div);
+    if (!state.dishes.length) {
+      container.innerHTML = '<p class="muted">No dishes yet.</p>';
+      return;
     }
-
-    var buttons = container.querySelectorAll('.remove-dish-button');
-    for (var b = 0; b < buttons.length; b++) {
-      buttons[b].addEventListener('click', function () {
-        removeDish(this.getAttribute('data-id'));
-      }, false);
+    var grouped = groupBy(state.dishes, function (dish) { return dish.category || 'Menu'; });
+    var cats = Object.keys(grouped).sort();
+    for (var c = 0; c < cats.length; c++) {
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var content = document.createElement('div');
+      content.className = 'accordion-content';
+      for (var d = 0; d < grouped[cats[c]].length; d++) content.appendChild(makeDishDetails(grouped[cats[c]][d], true));
+      details.appendChild(content);
+      container.appendChild(details);
     }
   }
 
   function removeDish(id) {
-    if (state.dishes.length <= 1) {
-      showStatus('Keep at least one dish on the menu.');
-      return;
-    }
-    state.dishes = state.dishes.filter(function (dish) { return dish.id !== id; });
+    var dish = getDish(id);
+    if (!dish) return;
+    var ok = window.confirm('Remove "' + dish.name + '" from the menu?');
+    if (!ok) return;
+    state.dishes = state.dishes.filter(function (item) { return item.id !== id; });
     if (state.currentOrder && state.currentOrder.dishId === id) {
       state.currentOrder = null;
       state.pot = [];
     }
     saveAndRender('Dish removed.');
+  }
+
+  function renderSettings() {
+    renderSlots();
+    renderThemes();
+  }
+
+  function renderSlots() {
+    var nextCost = slotCost();
+    $('slot-info').textContent = 'You are using ' + state.dishes.length + ' of ' + state.menuSlots + ' menu slots. Next slot costs ' + nextCost + ' coins.';
+  }
+
+  function slotCost() {
+    return 30 + (state.menuSlots - 5) * 18;
+  }
+
+  function buySlot() {
+    var cost = slotCost();
+    if (state.coins < cost) {
+      showStatus('Not enough coins yet.');
+      return;
+    }
+    state.coins -= cost;
+    state.menuSlots += 1;
+    saveAndRender('Bought a new menu slot!');
   }
 
   function renderThemes() {
@@ -1016,18 +1178,14 @@
       button.className = 'theme-button';
       button.setAttribute('data-id', theme.id);
       button.innerHTML = '<strong>' + escapeHTML(theme.name) + '</strong><br><span>' + (owned ? (current ? 'Equipped' : 'Owned') : theme.cost + ' gems') + '</span>';
-      button.addEventListener('click', function () {
-        chooseTheme(this.getAttribute('data-id'));
-      }, false);
+      button.addEventListener('click', function () { chooseTheme(this.getAttribute('data-id')); }, false);
       container.appendChild(button);
     }
   }
 
   function chooseTheme(id) {
     var theme = null;
-    for (var i = 0; i < themes.length; i++) {
-      if (themes[i].id === id) theme = themes[i];
-    }
+    for (var i = 0; i < themes.length; i++) if (themes[i].id === id) theme = themes[i];
     if (!theme) return;
     if (state.ownedThemes.indexOf(id) === -1) {
       if (state.gems < theme.cost) {
@@ -1055,9 +1213,7 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.setTimeout(function () {
-        URL.revokeObjectURL(url);
-      }, 1000);
+      window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
       showStatus('Save exported as ' + fileName + '.');
     } catch (err) {
       showStatus('Download was blocked, but your save text is in the text box. Copy it as a backup.');
@@ -1104,25 +1260,32 @@
   function tryImportSave(text) {
     try {
       var imported = JSON.parse(text);
-      if (!imported || !imported.restaurantName || !Array.isArray(imported.dishes)) {
+      if (!imported || !Array.isArray(imported.dishes) || !Array.isArray(imported.ingredients) || !Array.isArray(imported.flavors)) {
         throw new Error('Not a Menu Menace save');
       }
-      state = mergeWithDefaults(imported);
-      saveAndRender('Save imported! Welcome back to ' + state.restaurantName + '.');
+      state = mergeWithBase(imported);
+      sanitizeStateAfterChanges();
+      saveAndRender('Save imported! Welcome back to ' + (state.restaurantName || 'Menu Menace') + '.');
     } catch (err) {
       showStatus('That does not look like a valid Menu Menace save.');
     }
   }
 
-  function resetGame() {
-    var ok = window.confirm('Reset Menu Menace in this browser? Export your save first if you want to keep it.');
+  function resetStarter() {
+    var ok = window.confirm('Reset to the spaghetti starter? This clears this browser\'s current Menu Menace save. Export first if you want to keep it.');
     if (!ok) return;
-    state = defaultState();
-    try {
-      window.localStorage.removeItem(SAVE_KEY);
-    } catch (err) {}
-    saveAndRender('Game reset.');
+    state = starterState(false);
+    saveAndRender('Reset to the spaghetti starter.');
     switchTab('front');
+  }
+
+  function startBlank() {
+    var ok = window.confirm('Start totally blank? This removes every flavor, ingredient, and dish from this browser save. Export first if you want to keep it.');
+    if (!ok) return;
+    state = starterState(true);
+    saveAndRender('Blank restaurant started. Add a flavor first.');
+    switchTab('customize');
+    openDetails('flavor-builder');
   }
 
   window.addEventListener('error', function (event) {
