@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu Menace</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to game</a>
+
+  <header class="app-header">
+    <div class="title-area">
+      <p class="eyebrow">tiny restaurant chaos simulator</p>
+      <h1 id="game-title">Menu Menace</h1>
+      <p id="chef-line" class="muted">Chef: Chef</p>
+    </div>
+
+    <section class="stats" aria-label="Restaurant stats">
+      <div class="stat"><span class="stat-label">Coins</span><strong id="coins-stat">0</strong></div>
+      <div class="stat"><span class="stat-label">Gems</span><strong id="gems-stat">0</strong></div>
+      <div class="stat"><span class="stat-label">Level</span><strong id="level-stat">1</strong></div>
+      <div class="stat"><span class="stat-label">XP</span><strong id="xp-stat">0 / 30</strong></div>
+      <div class="stat"><span class="stat-label">Menu slots</span><strong id="slot-stat">0 / 5</strong></div>
+    </section>
+
+    <nav class="tabs" aria-label="Game tabs">
+      <button type="button" class="tab-button" data-tab="front" aria-selected="true">Front Counter</button>
+      <button type="button" class="tab-button" data-tab="kitchen" aria-selected="false">Make Dish</button>
+      <button type="button" class="tab-button" data-tab="customize" aria-selected="false">Customize</button>
+      <button type="button" class="tab-button" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+    <div id="error-message" class="error-message" role="alert" hidden></div>
+
+    <section id="front" class="tab-panel">
+      <div class="grid two">
+        <article class="card">
+          <h2>Today's top trend</h2>
+          <p id="trend-text" class="trend-text">Loading...</p>
+          <p class="muted">Trends refresh every 15 minutes. Make a dish that is at least 50% this flavor for extra customers/tips.</p>
+          <button type="button" id="reroll-trend" class="small">Reroll trend now</button>
+        </article>
+
+        <article class="card">
+          <h2>Customer order</h2>
+          <div id="customer-bubble" class="speech" hidden>
+            <button type="button" id="close-bubble" class="bubble-close" aria-label="Close dialogue">×</button>
+            <p id="customer-text"></p>
+          </div>
+          <p id="no-order-text">No customer yet. Invite one in when you're ready.</p>
+          <div class="button-row">
+            <button type="button" id="new-customer" class="primary">New customer</button>
+            <button type="button" id="go-kitchen">Go make the food</button>
+          </div>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2>Your menu</h2>
+        <p class="muted">Customers can order from any dish here. Buy more menu slots if you want to add more dishes.</p>
+        <div id="menu-list" class="dish-list"></div>
+      </article>
+    </section>
+
+    <section id="kitchen" class="tab-panel" hidden>
+      <div class="grid two">
+        <article class="card">
+          <h2>Current order</h2>
+          <p id="kitchen-order">No active order yet.</p>
+          <div id="recipe-helper" class="recipe-helper"></div>
+          <div class="button-row">
+            <button type="button" id="use-recipe" class="small">Use recipe base</button>
+            <button type="button" id="clear-pot" class="small">Clear pot</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Cooking pot</h2>
+          <p class="muted">Tap ingredients to add them. Dragging also works on computers, but tapping is the main accessible control.</p>
+          <div id="pot" class="pot" aria-label="Cooking pot" tabindex="0"></div>
+          <div class="button-row">
+            <button type="button" id="serve-food" class="primary">Give to customer</button>
+          </div>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2>Ingredients</h2>
+        <p class="muted">Each ingredient carries flavor percentages. Your dish's final vibe is averaged from what you put in.</p>
+        <div id="ingredient-buttons" class="ingredient-list"></div>
+      </article>
+    </section>
+
+    <section id="customize" class="tab-panel" hidden>
+      <div class="grid two">
+        <article class="card">
+          <h2>Restaurant info</h2>
+          <div class="form-grid">
+            <label>Restaurant name
+              <input id="restaurant-name" type="text" autocomplete="off">
+            </label>
+            <label>Chef name
+              <input id="chef-name" type="text" autocomplete="off">
+            </label>
+          </div>
+          <button type="button" id="save-names" class="primary">Save names</button>
+        </article>
+
+        <article class="card">
+          <h2>Menu slots</h2>
+          <p id="slot-info"></p>
+          <button type="button" id="buy-slot" class="primary">Buy next slot</button>
+        </article>
+      </div>
+
+      <div class="grid three">
+        <article class="card">
+          <h2>Flavor profiles</h2>
+          <p class="muted">Each flavor has a descriptor and a noun form, like sweet / sweetness.</p>
+          <div class="stack">
+            <label>Descriptor
+              <input id="new-flavor-descriptor" type="text" placeholder="magical">
+            </label>
+            <label>Noun form
+              <input id="new-flavor-form" type="text" placeholder="magic">
+            </label>
+            <button type="button" id="add-flavor">Add flavor</button>
+          </div>
+          <div id="flavor-list" class="pill-list"></div>
+        </article>
+
+        <article class="card">
+          <h2>Ingredients</h2>
+          <div class="stack">
+            <label>Ingredient name
+              <input id="new-ingredient-name" type="text" placeholder="pepperoni">
+            </label>
+            <label>Collective/plural name
+              <input id="new-ingredient-collective" type="text" placeholder="pepperoni slices">
+            </label>
+            <fieldset>
+              <legend>Flavor amounts</legend>
+              <p class="muted small-text">0 to 100. It does not have to add to 100; the game normalizes it.</p>
+              <div id="ingredient-flavor-inputs" class="small-form-grid"></div>
+            </fieldset>
+            <button type="button" id="add-ingredient">Add ingredient</button>
+          </div>
+          <div id="ingredient-manage-list" class="manage-list"></div>
+        </article>
+
+        <article class="card">
+          <h2>Dishes</h2>
+          <div class="stack">
+            <label>Dish name
+              <input id="new-dish-name" type="text" placeholder="hamburger">
+            </label>
+            <label>Category
+              <input id="new-dish-category" type="text" placeholder="Sandwiches">
+            </label>
+            <label>Dish wording
+              <select id="new-dish-kind">
+                <option value="single">a/an dish, like a hamburger</option>
+                <option value="collective">some dish, like some pizza</option>
+              </select>
+            </label>
+            <label>Price in coins
+              <input id="new-dish-price" type="number" min="1" value="25">
+            </label>
+            <fieldset>
+              <legend>Base recipe</legend>
+              <div id="dish-base-ingredients" class="check-list"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Optional ingredients customers may request</legend>
+              <div id="dish-optional-ingredients" class="check-list"></div>
+            </fieldset>
+            <button type="button" id="add-dish">Add dish</button>
+          </div>
+          <div id="dish-manage-list" class="manage-list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="settings" class="tab-panel" hidden>
+      <div class="grid two">
+        <article class="card">
+          <h2>Restaurant colors</h2>
+          <p class="muted">Color upgrades cost gems. Leveling up gives gems.</p>
+          <div id="theme-list" class="theme-list"></div>
+        </article>
+
+        <article class="card">
+          <h2>Save file</h2>
+          <p class="muted">Export downloads a save file named after your restaurant and chef, like <strong>Little Pizzeria - Maria.menu-menace-save.json</strong>.</p>
+          <div class="button-row">
+            <button type="button" id="export-save" class="primary">Export save</button>
+            <label class="file-button">Import save
+              <input id="import-save" type="file" accept=".json,.menu-menace-save,application/json">
+            </label>
+          </div>
+          <textarea id="save-text" readonly placeholder="Export text will also appear here for copy/paste backup."></textarea>
+          <div class="button-row">
+            <button type="button" id="copy-save-text" class="small">Copy save text</button>
+            <button type="button" id="import-save-text" class="small">Import from text box</button>
+          </div>
+        </article>
+      </div>
+
+      <article class="card danger-zone">
+        <h2>Danger zone</h2>
+        <p>Resetting clears only this browser's Menu Menace save.</p>
+        <button type="button" id="reset-game" class="danger">Reset game</button>
+      </article>
+    </section>
+  </main>
+
+  <noscript>
+    <div class="noscript-warning">This game needs JavaScript enabled. Open it in Safari/Chrome instead of a preview if the buttons do not work.</div>
+  </noscript>
+</body>
+</html>
