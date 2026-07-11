@@ -1,0 +1,1328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu Menace Prototype</title>
+  <style>
+    :root {
+      --bg: #fff7ed;
+      --panel: #fffaf5;
+      --panel-2: #ffffff;
+      --text: #24180f;
+      --muted: #665447;
+      --border: #cba98a;
+      --accent: #9a4f13;
+      --accent-2: #66320b;
+      --good: #14743d;
+      --warn: #8a4b00;
+      --danger: #a32020;
+      --shadow: rgba(80, 42, 13, .15);
+    }
+    body[data-theme="berry"] {
+      --bg: #fff0f7;
+      --panel: #fff8fb;
+      --border: #d69abb;
+      --accent: #a11661;
+      --accent-2: #6b0c3d;
+      --shadow: rgba(80, 13, 50, .15);
+    }
+    body[data-theme="mint"] {
+      --bg: #eefcf4;
+      --panel: #f8fffb;
+      --border: #83caa5;
+      --accent: #08713d;
+      --accent-2: #034d29;
+      --shadow: rgba(0, 80, 40, .15);
+    }
+    body[data-theme="night"] {
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel-2: #111827;
+      --text: #f9fafb;
+      --muted: #d1d5db;
+      --border: #4b5563;
+      --accent: #93c5fd;
+      --accent-2: #bfdbfe;
+      --good: #86efac;
+      --warn: #fcd34d;
+      --danger: #fca5a5;
+      --shadow: rgba(0, 0, 0, .3);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding: 18px;
+      border-bottom: 2px solid var(--border);
+      background: var(--panel);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      box-shadow: 0 4px 16px var(--shadow);
+    }
+    h1, h2, h3 { margin: 0 0 10px; line-height: 1.15; }
+    h1 { font-size: clamp(1.5rem, 4vw, 2.2rem); }
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.05rem; }
+    .topbar {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .pill {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    button, input, select, textarea {
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
+      border: 2px solid var(--accent);
+      color: var(--accent-2);
+      background: var(--panel-2);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 800;
+      min-height: 44px;
+    }
+    button:hover, button:focus-visible {
+      outline: 4px solid var(--border);
+      background: var(--panel);
+    }
+    button.primary {
+      background: var(--accent);
+      color: var(--panel-2);
+    }
+    button.danger { border-color: var(--danger); color: var(--danger); }
+    button.small { padding: 7px 9px; min-height: 36px; border-radius: 10px; }
+    button[aria-selected="true"] {
+      background: var(--accent);
+      color: var(--panel-2);
+    }
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    .tab-panel[hidden] { display: none; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 4px 18px var(--shadow);
+    }
+    .muted { color: var(--muted); }
+    .big-number { font-size: 1.4rem; font-weight: 900; }
+    .speech {
+      border: 3px solid var(--accent);
+      background: var(--panel-2);
+      border-radius: 18px;
+      padding: 14px;
+      position: relative;
+      margin: 12px 0;
+    }
+    .speech p { margin: 0 0 10px; font-size: 1.08rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .stack { display: grid; gap: 10px; }
+    .ingredient-grid, .dish-grid, .flavor-grid, .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+    }
+    .ingredient-button {
+      text-align: left;
+      min-height: 58px;
+    }
+    .pot {
+      min-height: 140px;
+      border: 3px dashed var(--border);
+      background: var(--panel-2);
+      border-radius: 18px;
+      padding: 12px;
+    }
+    .pot.dragover {
+      border-color: var(--accent);
+      background: var(--panel);
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      margin: 3px;
+    }
+    .tag button {
+      min-height: 28px;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    label { font-weight: 800; display: block; margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--panel-2);
+      color: var(--text);
+      min-height: 44px;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    fieldset {
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      margin: 0;
+    }
+    legend { font-weight: 900; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    .check-list {
+      max-height: 190px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      background: var(--panel-2);
+    }
+    .check-line {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 4px;
+    }
+    .check-line input { min-height: auto; width: auto; }
+    .result-good { color: var(--good); font-weight: 900; }
+    .result-warn { color: var(--warn); font-weight: 900; }
+    .result-danger { color: var(--danger); font-weight: 900; }
+    .hidden-visually {
+      position: absolute !important;
+      height: 1px; width: 1px;
+      overflow: hidden;
+      clip: rect(1px, 1px, 1px, 1px);
+      white-space: nowrap;
+    }
+    .progress {
+      width: 100%;
+      height: 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress > div {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+    }
+    details {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--panel-2);
+    }
+    summary { font-weight: 900; cursor: pointer; }
+    .history-list { max-height: 280px; overflow: auto; }
+    @media (min-width: 800px) {
+      .topbar { grid-template-columns: 1fr auto; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div>
+        <h1 id="gameTitle">Menu Menace</h1>
+        <div class="muted" id="subtitle">A tiny low-stakes cooking game.</div>
+      </div>
+      <div class="stats" aria-label="Player stats">
+        <span class="pill">Coins: <span id="coins">0</span></span>
+        <span class="pill">Gems: <span id="gems">0</span></span>
+        <span class="pill">Level: <span id="level">1</span></span>
+        <span class="pill">XP: <span id="xpText">0/30</span></span>
+      </div>
+    </div>
+    <div class="progress" aria-label="XP progress"><div id="xpBar"></div></div>
+    <nav role="tablist" aria-label="Game tabs">
+      <button type="button" role="tab" id="tab-orders" aria-controls="orders" aria-selected="true" data-tab="orders">Orders</button>
+      <button type="button" role="tab" id="tab-kitchen" aria-controls="kitchen" aria-selected="false" data-tab="kitchen">Make Dish</button>
+      <button type="button" role="tab" id="tab-customize" aria-controls="customize" aria-selected="false" data-tab="customize">Customize</button>
+      <button type="button" role="tab" id="tab-settings" aria-controls="settings" aria-selected="false" data-tab="settings">Settings</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="orders" class="tab-panel" role="tabpanel" aria-labelledby="tab-orders">
+      <div class="grid">
+        <section class="card">
+          <h2>Customer counter</h2>
+          <div id="customerBubble" class="speech" aria-live="polite"></div>
+          <div class="row">
+            <button type="button" class="primary" id="serveButton">Give to customer</button>
+            <button type="button" id="newCustomerButton">New customer</button>
+            <button type="button" id="goKitchenButton">Go make it</button>
+          </div>
+          <p class="muted">Dialogue stays here until you close it. No vanishing 5-second speech bubbles.</p>
+        </section>
+
+        <section class="card">
+          <h2>Today's top trend</h2>
+          <div id="trendBox" class="stack"></div>
+          <button type="button" id="manualTrendButton">Change trend now</button>
+          <p class="muted">Normally this rotates every 15 minutes. Trendy dishes with over 50% of that flavor get better tips.</p>
+        </section>
+
+        <section class="card">
+          <h2>Your menu</h2>
+          <p>Menu slots: <strong id="slotCount">0</strong></p>
+          <div id="menuList" class="stack"></div>
+        </section>
+
+        <section class="card">
+          <h2>Recent customers</h2>
+          <div id="historyList" class="history-list stack"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="kitchen" class="tab-panel" role="tabpanel" aria-labelledby="tab-kitchen" hidden>
+      <div class="grid">
+        <section class="card">
+          <h2>Current order</h2>
+          <div id="orderSummary" class="stack"></div>
+          <details open>
+            <summary>Recipe guide</summary>
+            <div id="recipeGuide" class="stack"></div>
+          </details>
+        </section>
+
+        <section class="card">
+          <h2>Cooking pot</h2>
+          <p class="muted">Drag ingredients here, or use the Add buttons. Order does not matter.</p>
+          <div id="pot" class="pot" aria-live="polite" tabindex="0"></div>
+          <div class="row" style="margin-top: 10px;">
+            <button type="button" class="primary" id="serveButtonKitchen">Give to customer</button>
+            <button type="button" id="clearPotButton">Clear pot</button>
+            <button type="button" id="addRecipeButton">Add recipe basics</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Ingredient pantry</h2>
+          <div id="ingredientPantry" class="ingredient-grid"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="customize" class="tab-panel" role="tabpanel" aria-labelledby="tab-customize" hidden>
+      <div class="grid">
+        <section class="card">
+          <h2>Restaurant identity</h2>
+          <div class="form-grid">
+            <div>
+              <label for="restaurantNameInput">Restaurant name</label>
+              <input id="restaurantNameInput" autocomplete="off">
+            </div>
+            <div>
+              <label for="chefNameInput">Chef name customers use</label>
+              <input id="chefNameInput" autocomplete="off">
+            </div>
+            <button type="button" id="saveNamesButton" class="primary">Save names</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Flavor profiles</h2>
+          <p class="muted">Each profile has an adjective and a noun, like spicy and heat, or magical and magic.</p>
+          <div class="form-grid">
+            <div>
+              <label for="flavorAdjectiveInput">Adjective</label>
+              <input id="flavorAdjectiveInput" placeholder="magical">
+            </div>
+            <div>
+              <label for="flavorNounInput">Noun/form</label>
+              <input id="flavorNounInput" placeholder="magic">
+            </div>
+            <button type="button" id="addFlavorButton" class="primary">Add flavor</button>
+          </div>
+          <div id="flavorList" class="flavor-grid" style="margin-top: 12px;"></div>
+        </section>
+
+        <section class="card">
+          <h2>Ingredients</h2>
+          <div class="form-grid">
+            <div>
+              <label for="ingredientNameInput">Ingredient name</label>
+              <input id="ingredientNameInput" placeholder="pepperoni">
+            </div>
+            <div>
+              <label for="ingredientCollectiveInput">Ingredient wording</label>
+              <select id="ingredientCollectiveInput">
+                <option value="single">singular, like a pickle</option>
+                <option value="collective">collective, like cheese</option>
+              </select>
+            </div>
+          </div>
+          <div id="ingredientFlavorInputs" class="stack" style="margin: 12px 0;"></div>
+          <button type="button" id="addIngredientButton" class="primary">Add ingredient</button>
+          <div id="ingredientList" class="stack" style="margin-top: 12px;"></div>
+        </section>
+
+        <section class="card">
+          <h2>Dishes and menu slots</h2>
+          <p>You can make as many categories as you want, but dish slots start limited.</p>
+          <div class="row">
+            <button type="button" id="buySlotButton">Buy menu slot</button>
+            <span id="buySlotText" class="muted"></span>
+          </div>
+          <hr>
+          <div class="form-grid">
+            <div>
+              <label for="dishNameInput">Dish name</label>
+              <input id="dishNameInput" placeholder="hamburger">
+            </div>
+            <div>
+              <label for="dishCategoryInput">Category</label>
+              <input id="dishCategoryInput" list="categoryOptions" placeholder="Sandwiches">
+              <datalist id="categoryOptions"></datalist>
+            </div>
+            <div>
+              <label for="dishCollectiveInput">Dish wording</label>
+              <select id="dishCollectiveInput">
+                <option value="single">singular, like a hamburger</option>
+                <option value="collective">collective, like some pasta</option>
+              </select>
+            </div>
+            <div>
+              <label for="dishPriceInput">Menu price in coins</label>
+              <input id="dishPriceInput" type="number" min="1" value="20">
+            </div>
+          </div>
+          <div class="form-grid" style="align-items: start; margin-top: 12px;">
+            <fieldset>
+              <legend>Recipe basics</legend>
+              <div id="dishBaseIngredientChecks" class="check-list"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Optional ingredients customers may request</legend>
+              <div id="dishOptionalIngredientChecks" class="check-list"></div>
+            </fieldset>
+          </div>
+          <button type="button" id="addDishButton" class="primary" style="margin-top: 12px;">Add dish to menu</button>
+          <div id="dishList" class="stack" style="margin-top: 12px;"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <div class="grid">
+        <section class="card">
+          <h2>Restaurant colors</h2>
+          <p class="muted">Use gems from level ups, or trade lots of coins for gems.</p>
+          <div class="theme-grid" id="themeList"></div>
+          <div class="row" style="margin-top: 12px;">
+            <button type="button" id="buyGemButton">Trade 100 coins for 1 gem</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Save data</h2>
+          <p class="muted">The game autosaves in this browser. You can export or import a save code too.</p>
+          <div class="row">
+            <button type="button" id="exportButton">Export save</button>
+            <button type="button" id="importButton">Import save</button>
+            <button type="button" id="resetButton" class="danger">Reset game</button>
+          </div>
+          <label for="saveText" style="margin-top: 12px;">Save code</label>
+          <textarea id="saveText" spellcheck="false"></textarea>
+        </section>
+
+        <section class="card">
+          <h2>Accessibility notes</h2>
+          <ul>
+            <li>Speech bubbles do not auto-disappear.</li>
+            <li>Every drag action has a button alternative.</li>
+            <li>Order does not matter when cooking.</li>
+            <li>Penalties are gentle, so mistakes still earn coins.</li>
+            <li>All progress autosaves locally.</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="liveRegion" class="hidden-visually" aria-live="polite"></div>
+
+  <script>
+    const SAVE_KEY = "menu-menace-prototype-save-v1";
+    const TREND_LENGTH_MS = 15 * 60 * 1000;
+    let memorySave = null;
+
+    const THEMES = [
+      { id: "classic", name: "Classic Cafe", cost: 0 },
+      { id: "berry", name: "Berry Bakery", cost: 5 },
+      { id: "mint", name: "Mint Garden", cost: 8 },
+      { id: "night", name: "Midnight Diner", cost: 12 }
+    ];
+
+    const DEFAULT_STATE = {
+      restaurantName: "Menu Menace",
+      chefName: "Chef",
+      coins: 60,
+      gems: 0,
+      xp: 0,
+      level: 1,
+      menuSlots: 5,
+      unlockedThemes: ["classic"],
+      activeTheme: "classic",
+      categories: ["Sandwiches", "Pizza", "Desserts", "Pasta"],
+      flavors: [
+        { id: "sweet", adjective: "sweet", noun: "sweetness" },
+        { id: "savory", adjective: "savory", noun: "savory flavor" },
+        { id: "spicy", adjective: "spicy", noun: "heat" },
+        { id: "salty", adjective: "salty", noun: "saltiness" },
+        { id: "sour", adjective: "sour", noun: "tang" }
+      ],
+      ingredients: [
+        { id: "bread", name: "bread", collective: true, flavors: { savory: 2, salty: 1 } },
+        { id: "burger-patty", name: "burger patty", collective: false, flavors: { savory: 5, salty: 1 } },
+        { id: "cheese", name: "cheese", collective: true, flavors: { savory: 3, salty: 2 } },
+        { id: "pickles", name: "pickles", collective: true, flavors: { sour: 4, salty: 2 } },
+        { id: "dough", name: "dough", collective: true, flavors: { savory: 2 } },
+        { id: "tomato-sauce", name: "tomato sauce", collective: true, flavors: { savory: 3, sour: 1 } },
+        { id: "pepperoni", name: "pepperoni", collective: true, flavors: { savory: 4, spicy: 2, salty: 3 } },
+        { id: "mushrooms", name: "mushrooms", collective: true, flavors: { savory: 3 } },
+        { id: "apples", name: "apples", collective: true, flavors: { sweet: 3, sour: 1 } },
+        { id: "cinnamon", name: "cinnamon", collective: true, flavors: { sweet: 1, spicy: 1 } },
+        { id: "sugar", name: "sugar", collective: true, flavors: { sweet: 5 } },
+        { id: "pasta", name: "pasta", collective: true, flavors: { savory: 1 } }
+      ],
+      dishes: [
+        { id: "hamburger", name: "hamburger", category: "Sandwiches", collective: false, baseIngredientIds: ["bread", "burger-patty", "cheese"], optionalIngredientIds: ["pickles"], price: 20 },
+        { id: "pizza", name: "pizza", category: "Pizza", collective: true, baseIngredientIds: ["dough", "tomato-sauce", "cheese"], optionalIngredientIds: ["pepperoni", "mushrooms"], price: 25 },
+        { id: "apple-fritter", name: "apple fritter", category: "Desserts", collective: false, baseIngredientIds: ["dough", "apples", "sugar", "cinnamon"], optionalIngredientIds: [], price: 22 },
+        { id: "plate-of-pasta", name: "plate of pasta", category: "Pasta", collective: false, baseIngredientIds: ["pasta", "tomato-sauce", "cheese"], optionalIngredientIds: ["mushrooms"], price: 20 }
+      ],
+      currentOrder: null,
+      potIngredientIds: [],
+      trend: null,
+      closedDialogOrderId: null,
+      history: []
+    };
+
+    let state = loadState();
+
+    const el = id => document.getElementById(id);
+
+    function clone(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY) || memorySave;
+        if (!raw) return startState();
+        const saved = JSON.parse(raw);
+        return normalizeState({ ...clone(DEFAULT_STATE), ...saved });
+      } catch (err) {
+        console.warn(err);
+        return startState();
+      }
+    }
+
+    function startState() {
+      const fresh = clone(DEFAULT_STATE);
+      fresh.trend = makeTrend(fresh);
+      fresh.currentOrder = makeOrder(fresh);
+      return normalizeState(fresh);
+    }
+
+    function normalizeState(s) {
+      if (!s.flavors) s.flavors = clone(DEFAULT_STATE.flavors);
+      if (!s.ingredients) s.ingredients = clone(DEFAULT_STATE.ingredients);
+      if (!s.dishes) s.dishes = clone(DEFAULT_STATE.dishes);
+      if (!s.categories) s.categories = [];
+      if (!s.history) s.history = [];
+      if (!s.potIngredientIds) s.potIngredientIds = [];
+      if (!s.closedDialogOrderId) s.closedDialogOrderId = null;
+      if (!s.unlockedThemes) s.unlockedThemes = ["classic"];
+      if (!s.activeTheme) s.activeTheme = "classic";
+      if (!s.trend || !s.flavors.some(f => f.id === s.trend.flavorId)) s.trend = makeTrend(s);
+      if (!s.currentOrder || !s.dishes.some(d => d.id === s.currentOrder.dishId)) s.currentOrder = makeOrder(s);
+      s.dishes.forEach(d => {
+        if (!d.baseIngredientIds) d.baseIngredientIds = [];
+        if (!d.optionalIngredientIds) d.optionalIngredientIds = [];
+        if (typeof d.collective !== "boolean") d.collective = false;
+      });
+      return s;
+    }
+
+    function saveState() {
+      const packed = JSON.stringify(state);
+      memorySave = packed;
+      try {
+        localStorage.setItem(SAVE_KEY, packed);
+      } catch (err) {
+        console.warn("Autosave unavailable in this preview, using temporary memory save.", err);
+      }
+    }
+
+    function slug(text) {
+      return String(text).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "item";
+    }
+
+    function uniqueId(base, collection) {
+      let id = slug(base);
+      let candidate = id;
+      let n = 2;
+      while (collection.some(item => item.id === candidate)) {
+        candidate = id + "-" + n;
+        n++;
+      }
+      return candidate;
+    }
+
+    function articleFor(name) {
+      const word = String(name).trim().toLowerCase();
+      return /^[aeiou]/.test(word) ? "an" : "a";
+    }
+
+    function phraseDish(dish) {
+      if (!dish) return "a mystery dish";
+      return dish.collective ? "some " + dish.name : articleFor(dish.name) + " " + dish.name;
+    }
+
+    function phraseIngredient(ingredient) {
+      if (!ingredient) return "mystery ingredients";
+      return ingredient.collective ? ingredient.name : articleFor(ingredient.name) + " " + ingredient.name;
+    }
+
+    function getFlavor(id) { return state.flavors.find(f => f.id === id); }
+    function getIngredient(id) { return state.ingredients.find(i => i.id === id); }
+    function getDish(id) { return state.dishes.find(d => d.id === id); }
+
+    function xpNeeded(level = state.level) {
+      return 25 + level * 15;
+    }
+
+    function randomItem(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function makeTrend(s = state) {
+      const flavor = randomItem(s.flavors.length ? s.flavors : DEFAULT_STATE.flavors);
+      return { flavorId: flavor.id, nextAt: Date.now() + TREND_LENGTH_MS };
+    }
+
+    function maybeUpdateTrend() {
+      if (!state.trend || Date.now() >= state.trend.nextAt || !getFlavor(state.trend.flavorId)) {
+        state.trend = makeTrend(state);
+        saveState();
+      }
+    }
+
+    function expectedIngredientIds(order = state.currentOrder) {
+      const dish = getDish(order && order.dishId);
+      if (!dish) return [];
+      const set = new Set(dish.baseIngredientIds);
+      (order.includeIngredientIds || []).forEach(id => set.add(id));
+      (order.excludeIngredientIds || []).forEach(id => set.delete(id));
+      return Array.from(set);
+    }
+
+    function makeOrder(s = state) {
+      if (!s.dishes.length) return null;
+      const dish = randomItem(s.dishes);
+      const optionalIds = [...(dish.optionalIngredientIds || [])].filter(id => s.ingredients.some(i => i.id === id));
+      const baseIds = [...(dish.baseIngredientIds || [])].filter(id => s.ingredients.some(i => i.id === id));
+      const includeIngredientIds = [];
+      const excludeIngredientIds = [];
+
+      optionalIds.forEach(id => {
+        if (Math.random() < 0.45) includeIngredientIds.push(id);
+      });
+
+      const possibleExcludes = [...optionalIds, ...baseIds.filter(() => Math.random() < 0.25)];
+      possibleExcludes.forEach(id => {
+        if (!includeIngredientIds.includes(id) && Math.random() < 0.18) excludeIngredientIds.push(id);
+      });
+
+      const order = {
+        id: "order-" + Date.now() + "-" + Math.floor(Math.random() * 10000),
+        dishId: dish.id,
+        includeIngredientIds,
+        excludeIngredientIds,
+        createdAt: Date.now()
+      };
+      order.text = makeOrderText(order, s);
+      return order;
+    }
+
+    function makeOrderText(order, s = state) {
+      const dish = s.dishes.find(d => d.id === order.dishId);
+      const M = s.chefName || "Chef";
+      const dishPhrase = phraseDish(dish);
+      const include = (order.includeIngredientIds || []).map(id => s.ingredients.find(i => i.id === id)).filter(Boolean);
+      const exclude = (order.excludeIngredientIds || []).map(id => s.ingredients.find(i => i.id === id)).filter(Boolean);
+      const includeText = joinWords(include.map(phraseIngredient));
+      const excludeText = joinWords(exclude.map(i => i.collective ? i.name : phraseIngredient(i)));
+      const hasInclude = include.length > 0;
+      const hasExclude = exclude.length > 0;
+
+      const simpleTemplates = [
+        `Hello, ${M}! Can I get ${dishPhrase} please? Thanks!`,
+        `I'll just have ${dishPhrase} and I'll get outta your hair.`,
+        `I would give you my left kneecap if I could have ${dishPhrase}.`,
+        `Hi there, dear! May I please have ${dishPhrase}?`,
+        `Heya friend! Could I please have ${dishPhrase}?`
+      ];
+      const includeTemplates = [
+        `May I please have ${dishPhrase}? I would appreciate it if you added ${includeText}. Thank you kindly.`,
+        `Hi, umm, like can I get ${dishPhrase} and ${includeText} on that?`,
+        `I'll have ${dishPhrase} with ${includeText}.`,
+        `I NEED ${includeText}, stat! Add it to ${dishPhrase}, please.`
+      ];
+      const excludeTemplates = [
+        `Hello! I'd like ${dishPhrase} with no ${excludeText}, please.`,
+        `Please, just don't put ${excludeText} on my ${dish.name}.`,
+        `I'll have ${dishPhrase} without ${excludeText}.`,
+        `I just want ${dishPhrase}. No ${excludeText}. That's all.`
+      ];
+      const bothTemplates = [
+        `My order might seem a bit complicated, but I would love ${dishPhrase} with ${includeText} and no ${excludeText}.`,
+        `I'll have ${dishPhrase} with ${includeText}, but please leave off ${excludeText}.`,
+        `Hello, ${M}! Could I get ${dishPhrase} plus ${includeText}, and no ${excludeText}? Thanks!`
+      ];
+      if (hasInclude && hasExclude) return randomItem(bothTemplates);
+      if (hasInclude) return randomItem(includeTemplates);
+      if (hasExclude) return randomItem(excludeTemplates);
+      return randomItem(simpleTemplates);
+    }
+
+    function joinWords(words) {
+      const clean = words.filter(Boolean);
+      if (clean.length === 0) return "nothing";
+      if (clean.length === 1) return clean[0];
+      if (clean.length === 2) return clean[0] + " and " + clean[1];
+      return clean.slice(0, -1).join(", ") + ", and " + clean[clean.length - 1];
+    }
+
+    function calculateFlavorProfile(ingredientIds) {
+      const totals = {};
+      let total = 0;
+      ingredientIds.forEach(id => {
+        const ing = getIngredient(id);
+        if (!ing) return;
+        Object.entries(ing.flavors || {}).forEach(([flavorId, value]) => {
+          const amount = Number(value) || 0;
+          if (amount <= 0) return;
+          totals[flavorId] = (totals[flavorId] || 0) + amount;
+          total += amount;
+        });
+      });
+      const percentages = {};
+      state.flavors.forEach(flavor => {
+        percentages[flavor.id] = total ? Math.round(((totals[flavor.id] || 0) / total) * 100) : 0;
+      });
+      const dominant = [...state.flavors].sort((a, b) => (percentages[b.id] || 0) - (percentages[a.id] || 0))[0] || null;
+      const low = state.flavors.find(f => (percentages[f.id] || 0) < 5) || null;
+      return { totals, total, percentages, dominant, low };
+    }
+
+    function compareIngredients(expected, actual) {
+      const expectedCounts = counts(expected);
+      const actualCounts = counts(actual);
+      const missing = [];
+      const extra = [];
+      Object.keys(expectedCounts).forEach(id => {
+        const diff = expectedCounts[id] - (actualCounts[id] || 0);
+        for (let n = 0; n < diff; n++) missing.push(id);
+      });
+      Object.keys(actualCounts).forEach(id => {
+        const diff = actualCounts[id] - (expectedCounts[id] || 0);
+        for (let n = 0; n < diff; n++) extra.push(id);
+      });
+      return { missing, extra };
+    }
+
+    function counts(arr) {
+      return arr.reduce((acc, id) => {
+        acc[id] = (acc[id] || 0) + 1;
+        return acc;
+      }, {});
+    }
+
+    function serveOrder() {
+      if (!state.currentOrder) return;
+      const dish = getDish(state.currentOrder.dishId);
+      if (!dish) return;
+      const expected = expectedIngredientIds();
+      const actual = [...state.potIngredientIds];
+      const { missing, extra } = compareIngredients(expected, actual);
+      const mistakes = missing.length + extra.length;
+      const penalty = Math.min(0.6, mistakes * 0.15);
+      const basePay = Number(dish.price) || Math.max(5, expected.length * 5);
+      const trendFlavor = getFlavor(state.trend && state.trend.flavorId);
+      const profile = calculateFlavorProfile(actual.length ? actual : expected);
+      const trendPercent = trendFlavor ? (profile.percentages[trendFlavor.id] || 0) : 0;
+      const trendTip = trendPercent > 50 ? Math.max(2, Math.round(basePay * 0.25)) : 0;
+      const payout = Math.max(1, Math.round(basePay * (1 - penalty)) + trendTip);
+      let xpGain = 5 + expected.length * 2 + Math.max(0, 4 - mistakes);
+      if (trendTip) xpGain += 4;
+      state.coins += payout;
+      addXp(xpGain);
+
+      const response = makeCriticism({ dish, expected, actual, missing, extra, payout, trendTip, profile });
+      state.history.unshift({
+        at: Date.now(),
+        orderText: state.currentOrder.text,
+        response,
+        payout,
+        xpGain,
+        mistakes,
+        dishName: dish.name
+      });
+      state.history = state.history.slice(0, 20);
+      state.potIngredientIds = [];
+      state.currentOrder = makeOrder(state);
+      state.closedDialogOrderId = null;
+      saveState();
+      render();
+      switchTab("orders");
+      announce(`Customer paid ${payout} coins and you gained ${xpGain} XP.`);
+    }
+
+    function makeCriticism(info) {
+      const { dish, missing, extra, payout, trendTip, profile } = info;
+      const dominant = profile.dominant || state.flavors[0];
+      const low = profile.low;
+      const ingredientNamesMissing = joinWords(missing.map(id => phraseIngredient(getIngredient(id))));
+      const extraNames = joinWords(extra.map(id => phraseIngredient(getIngredient(id))));
+      const dishName = dish.collective ? dish.name : dish.name;
+      const positives = [
+        `The ${dominant.noun} of the ${dishName} is perfect for this dish.`,
+        `I really like how the ${dominant.noun} works here.`,
+        `The ${dishName} is really ${dominant.adjective}. I like it!`,
+        `Ooh, so ${dominant.adjective}! Nice!`,
+        `The ${dominant.noun} really stood out in this dish and it balances well.`
+      ];
+      if (low) positives.push(`I like how it is not too ${low.adjective}. Good job.`);
+      const constructive = [];
+      if (missing.length) constructive.push(`I think this ${dishName} could use a bit more ${ingredientNamesMissing}.`);
+      if (missing.length) constructive.push(`It is great, but I think you forgot ${ingredientNamesMissing}. That's all right because you will remember next time.`);
+      if (extra.length) constructive.push(`I liked it, but I was not expecting ${extraNames} on this order.`);
+      if (!missing.length && !extra.length) {
+        let line = randomItem(positives);
+        if (trendTip) line += ` Also, this totally fit the trend, so I left an extra tip.`;
+        line += ` Paid ${payout} coins.`;
+        return line;
+      }
+      return `${randomItem(positives)} ${randomItem(constructive)} Paid ${payout} coins.`;
+    }
+
+    function addXp(amount) {
+      state.xp += amount;
+      while (state.xp >= xpNeeded()) {
+        state.xp -= xpNeeded();
+        state.level += 1;
+        state.gems += state.level;
+        state.history.unshift({
+          at: Date.now(),
+          orderText: "Level up!",
+          response: `You reached level ${state.level} and earned ${state.level} gems.`,
+          payout: 0,
+          xpGain: 0,
+          mistakes: 0,
+          dishName: "Level up"
+        });
+      }
+    }
+
+    function addIngredientToPot(id) {
+      if (!getIngredient(id)) return;
+      state.potIngredientIds.push(id);
+      saveState();
+      renderKitchen();
+      announce(`${getIngredient(id).name} added to the pot.`);
+    }
+
+    function removePotIndex(index) {
+      state.potIngredientIds.splice(index, 1);
+      saveState();
+      renderKitchen();
+    }
+
+    function clearPot() {
+      state.potIngredientIds = [];
+      saveState();
+      renderKitchen();
+      announce("Cooking pot cleared.");
+    }
+
+    function addRecipeBasics() {
+      state.potIngredientIds = expectedIngredientIds();
+      saveState();
+      renderKitchen();
+      announce("Recipe basics added to the pot.");
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('[role="tab"]').forEach(button => {
+        const selected = button.dataset.tab === tabId;
+        button.setAttribute("aria-selected", String(selected));
+      });
+      document.querySelectorAll(".tab-panel").forEach(panel => {
+        panel.hidden = panel.id !== tabId;
+      });
+      const tabButton = document.querySelector(`[data-tab="${tabId}"]`);
+      if (tabButton) {
+        try { tabButton.focus({ preventScroll: true }); }
+        catch (err) { tabButton.focus(); }
+      }
+    }
+
+    function render() {
+      maybeUpdateTrend();
+      document.body.dataset.theme = state.activeTheme || "classic";
+      el("gameTitle").textContent = state.restaurantName || "Menu Menace";
+      el("subtitle").textContent = `${state.chefName || "Chef"}'s low-stakes restaurant.`;
+      el("coins").textContent = state.coins;
+      el("gems").textContent = state.gems;
+      el("level").textContent = state.level;
+      el("xpText").textContent = `${state.xp}/${xpNeeded()}`;
+      el("xpBar").style.width = Math.min(100, Math.round((state.xp / xpNeeded()) * 100)) + "%";
+      renderOrders();
+      renderKitchen();
+      renderCustomize();
+      renderSettings();
+    }
+
+    function renderOrders() {
+      const bubble = el("customerBubble");
+      const order = state.currentOrder;
+      const dish = getDish(order && order.dishId);
+      if (!order || !dish) {
+        bubble.innerHTML = `<p>No customer yet.</p><button type="button" class="small" id="bubbleClose">Close dialogue</button>`;
+      } else if (state.closedDialogOrderId === order.id) {
+        bubble.innerHTML = `<p class="muted">Dialogue closed. The current order is still saved in the order summary.</p>`;
+      } else {
+        bubble.innerHTML = `
+          <p><strong>Customer says:</strong> ${escapeHtml(order.text)}</p>
+          <p class="muted">Requested dish: ${escapeHtml(phraseDish(dish))}</p>
+          <button type="button" class="small" id="bubbleClose">Close dialogue</button>
+        `;
+      }
+      const closeButton = el("bubbleClose");
+      if (closeButton) {
+        closeButton.addEventListener("click", () => {
+          if (state.currentOrder) state.closedDialogOrderId = state.currentOrder.id;
+          saveState();
+          renderOrders();
+        });
+      }
+
+      const trendFlavor = getFlavor(state.trend && state.trend.flavorId) || state.flavors[0];
+      const secondsLeft = Math.max(0, Math.ceil((((state.trend && state.trend.nextAt) || Date.now()) - Date.now()) / 1000));
+      const minutes = Math.floor(secondsLeft / 60);
+      const seconds = secondsLeft % 60;
+      el("trendBox").innerHTML = `
+        <div class="big-number">${escapeHtml((trendFlavor && trendFlavor.adjective) || "mystery")}</div>
+        <div>Trend form: <strong>${escapeHtml((trendFlavor && trendFlavor.noun) || "mystery")}</strong></div>
+        <div class="muted">Next trend in about ${minutes}:${String(seconds).padStart(2, "0")}</div>
+      `;
+
+      el("slotCount").textContent = `${state.dishes.length}/${state.menuSlots}`;
+      el("menuList").innerHTML = state.dishes.map(dishCardHtml).join("") || `<p class="muted">No dishes yet. Add one in Customize.</p>`;
+      el("historyList").innerHTML = state.history.length ? state.history.map(h => `
+        <details>
+          <summary>${escapeHtml(h.dishName)} - ${escapeHtml(new Date(h.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</summary>
+          <p><strong>Order:</strong> ${escapeHtml(h.orderText)}</p>
+          <p><strong>Customer:</strong> ${escapeHtml(h.response)}</p>
+          <p class="muted">Coins: ${h.payout}. XP: ${h.xpGain}. Mistakes: ${h.mistakes}.</p>
+        </details>
+      `).join("") : `<p class="muted">No served customers yet.</p>`;
+    }
+
+    function dishCardHtml(dish) {
+      const base = dish.baseIngredientIds.map(id => (getIngredient(id) && getIngredient(id).name)).filter(Boolean);
+      const optional = dish.optionalIngredientIds.map(id => (getIngredient(id) && getIngredient(id).name)).filter(Boolean);
+      const profile = calculateFlavorProfile(dish.baseIngredientIds);
+      const dominant = profile.dominant;
+      return `
+        <article class="card" style="box-shadow: none;">
+          <h3>${escapeHtml(dish.name)} <span class="muted">(${escapeHtml(dish.category || "Menu")})</span></h3>
+          <p>Price: <strong>${Number(dish.price) || 0} coins</strong></p>
+          <p>Basics: ${escapeHtml(joinWords(base))}</p>
+          <p>Optional: ${optional.length ? escapeHtml(joinWords(optional)) : "none"}</p>
+          <p class="muted">Dominant flavor: ${dominant ? escapeHtml(dominant.adjective) : "none"}</p>
+        </article>
+      `;
+    }
+
+    function renderKitchen() {
+      const order = state.currentOrder;
+      const dish = getDish(order && order.dishId);
+      const expected = expectedIngredientIds();
+      const include = ((order && order.includeIngredientIds) || []).map(id => (getIngredient(id) && getIngredient(id).name)).filter(Boolean);
+      const exclude = ((order && order.excludeIngredientIds) || []).map(id => (getIngredient(id) && getIngredient(id).name)).filter(Boolean);
+      el("orderSummary").innerHTML = order && dish ? `
+        <p><strong>${escapeHtml(order.text)}</strong></p>
+        <p>Dish: ${escapeHtml(phraseDish(dish))}</p>
+        <p>Add: ${include.length ? escapeHtml(joinWords(include)) : "nothing extra"}</p>
+        <p>Leave off: ${exclude.length ? escapeHtml(joinWords(exclude)) : "nothing"}</p>
+      ` : `<p class="muted">No current order.</p>`;
+
+      el("recipeGuide").innerHTML = expected.length ? `
+        <p>Expected ingredients:</p>
+        <div>${expected.map(id => `<span class="tag">${escapeHtml((getIngredient(id) && getIngredient(id).name) || id)}</span>`).join("")}</div>
+      ` : `<p class="muted">No recipe selected.</p>`;
+
+      const pot = el("pot");
+      pot.innerHTML = state.potIngredientIds.length ? state.potIngredientIds.map((id, index) => {
+        const ing = getIngredient(id);
+        return `<span class="tag">${escapeHtml((ing && ing.name) || id)} <button type="button" class="small" data-remove-pot="${index}" aria-label="Remove ${escapeHtml((ing && ing.name) || id)}">x</button></span>`;
+      }).join("") : `<p class="muted">The pot is empty.</p>`;
+      pot.querySelectorAll("[data-remove-pot]").forEach(btn => btn.addEventListener("click", () => removePotIndex(Number(btn.dataset.removePot))));
+
+      el("ingredientPantry").innerHTML = state.ingredients.map(ing => {
+        const profile = calculateFlavorProfile([ing.id]);
+        const flavorText = state.flavors.map(f => `${f.adjective} ${profile.percentages[f.id] || 0}%`).filter(txt => !txt.endsWith(" 0%") && !txt.includes(" 0%")).join(", ");
+        return `<button type="button" class="ingredient-button" draggable="true" data-add-ing="${ing.id}">
+          <strong>${escapeHtml(ing.name)}</strong><br><span class="muted">${escapeHtml(flavorText || "plain")}</span>
+        </button>`;
+      }).join("") || `<p class="muted">No ingredients. Add some in Customize.</p>`;
+      el("ingredientPantry").querySelectorAll("[data-add-ing]").forEach(btn => {
+        btn.addEventListener("click", () => addIngredientToPot(btn.dataset.addIng));
+        btn.addEventListener("dragstart", event => {
+          event.dataTransfer.setData("text/plain", btn.dataset.addIng);
+        });
+      });
+    }
+
+    function renderCustomize() {
+      el("restaurantNameInput").value = state.restaurantName || "";
+      el("chefNameInput").value = state.chefName || "";
+
+      el("flavorList").innerHTML = state.flavors.map(flavor => `
+        <div class="card" style="box-shadow: none; padding: 10px;">
+          <strong>${escapeHtml(flavor.adjective)}</strong><br>
+          <span class="muted">Form: ${escapeHtml(flavor.noun)}</span>
+        </div>
+      `).join("");
+      renderIngredientFlavorInputs();
+      renderIngredientList();
+      renderDishFormChecks();
+      renderDishList();
+      el("categoryOptions").innerHTML = state.categories.map(cat => `<option value="${escapeHtml(cat)}"></option>`).join("");
+      const slotCost = menuSlotCost();
+      el("buySlotText").textContent = `Next slot costs ${slotCost} coins.`;
+      el("buySlotButton").disabled = state.coins < slotCost;
+    }
+
+    function renderIngredientFlavorInputs() {
+      el("ingredientFlavorInputs").innerHTML = `
+        <fieldset>
+          <legend>Flavor strength from 0 to 5</legend>
+          <div class="form-grid">
+            ${state.flavors.map(f => `
+              <div>
+                <label for="newIngFlavor-${f.id}">${escapeHtml(f.adjective)}</label>
+                <input id="newIngFlavor-${f.id}" data-new-ing-flavor="${f.id}" type="number" min="0" max="5" value="0">
+              </div>
+            `).join("")}
+          </div>
+        </fieldset>
+      `;
+    }
+
+    function renderIngredientList() {
+      el("ingredientList").innerHTML = state.ingredients.map(ing => {
+        const entries = Object.entries(ing.flavors || {})
+          .filter(([, value]) => Number(value) > 0)
+          .map(([id, value]) => `${(getFlavor(id) && getFlavor(id).adjective) || id}: ${value}`);
+        return `<details>
+          <summary>${escapeHtml(ing.name)}</summary>
+          <p>Wording: ${ing.collective ? "collective" : "singular"}</p>
+          <p>Flavors: ${escapeHtml(entries.join(", ") || "plain")}</p>
+        </details>`;
+      }).join("");
+    }
+
+    function renderDishFormChecks() {
+      const checks = state.ingredients.map(ing => `
+        <label class="check-line"><input type="checkbox" value="${ing.id}"> <span>${escapeHtml(ing.name)}</span></label>
+      `).join("");
+      el("dishBaseIngredientChecks").innerHTML = checks || `<p class="muted">Add ingredients first.</p>`;
+      el("dishOptionalIngredientChecks").innerHTML = checks || `<p class="muted">Add ingredients first.</p>`;
+    }
+
+    function renderDishList() {
+      el("dishList").innerHTML = state.dishes.map(dish => `
+        <details>
+          <summary>${escapeHtml(dish.name)} - ${Number(dish.price) || 0} coins</summary>
+          <p>Category: ${escapeHtml(dish.category || "Menu")}</p>
+          <p>Basics: ${escapeHtml(joinWords(dish.baseIngredientIds.map(id => (getIngredient(id) && getIngredient(id).name)).filter(Boolean)))}</p>
+          <p>Optional: ${escapeHtml(joinWords(dish.optionalIngredientIds.map(id => (getIngredient(id) && getIngredient(id).name)).filter(Boolean)))}</p>
+          <div class="form-grid">
+            <div>
+              <label for="price-${dish.id}">Change price</label>
+              <input id="price-${dish.id}" data-price-id="${dish.id}" type="number" min="1" value="${Number(dish.price) || 1}">
+            </div>
+            <button type="button" data-save-price="${dish.id}">Save price</button>
+            <button type="button" class="danger" data-delete-dish="${dish.id}">Delete dish</button>
+          </div>
+        </details>
+      `).join("");
+      el("dishList").querySelectorAll("[data-save-price]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const input = el("price-" + btn.dataset.savePrice);
+          const dish = getDish(btn.dataset.savePrice);
+          if (dish && input) dish.price = Math.max(1, Number(input.value) || dish.price || 1);
+          saveState(); render(); announce("Dish price saved.");
+        });
+      });
+      el("dishList").querySelectorAll("[data-delete-dish]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (state.dishes.length <= 1) { alert("Keep at least one dish on the menu."); return; }
+          state.dishes = state.dishes.filter(d => d.id !== btn.dataset.deleteDish);
+          if ((state.currentOrder && state.currentOrder.dishId) === btn.dataset.deleteDish) state.currentOrder = makeOrder(state);
+          saveState(); render(); announce("Dish deleted.");
+        });
+      });
+    }
+
+    function renderSettings() {
+      el("themeList").innerHTML = THEMES.map(theme => {
+        const unlocked = state.unlockedThemes.includes(theme.id);
+        const active = state.activeTheme === theme.id;
+        const label = active ? "Active" : unlocked ? "Use" : `Buy for ${theme.cost} gems`;
+        return `<button type="button" data-theme-id="${theme.id}" ${(!unlocked && state.gems < theme.cost) ? "disabled" : ""}>
+          ${escapeHtml(theme.name)}<br><span class="muted">${escapeHtml(label)}</span>
+        </button>`;
+      }).join("");
+      el("themeList").querySelectorAll("[data-theme-id]").forEach(btn => {
+        btn.addEventListener("click", () => chooseTheme(btn.dataset.themeId));
+      });
+      el("buyGemButton").disabled = state.coins < 100;
+    }
+
+    function chooseTheme(themeId) {
+      const theme = THEMES.find(t => t.id === themeId);
+      if (!theme) return;
+      if (!state.unlockedThemes.includes(themeId)) {
+        if (state.gems < theme.cost) return;
+        state.gems -= theme.cost;
+        state.unlockedThemes.push(themeId);
+      }
+      state.activeTheme = themeId;
+      saveState(); render(); announce(`${theme.name} theme selected.`);
+    }
+
+    function menuSlotCost() {
+      return 30 + Math.max(0, state.menuSlots - 5) * 15;
+    }
+
+    function addFlavor() {
+      const adjective = el("flavorAdjectiveInput").value.trim();
+      const noun = el("flavorNounInput").value.trim();
+      if (!adjective || !noun) { alert("Add both an adjective and a noun/form."); return; }
+      const id = uniqueId(adjective, state.flavors);
+      state.flavors.push({ id, adjective, noun });
+      state.ingredients.forEach(ing => { if (!ing.flavors[id]) ing.flavors[id] = 0; });
+      el("flavorAdjectiveInput").value = "";
+      el("flavorNounInput").value = "";
+      saveState(); render(); announce("Flavor added.");
+    }
+
+    function addIngredient() {
+      const name = el("ingredientNameInput").value.trim();
+      if (!name) { alert("Name the ingredient first."); return; }
+      const flavors = {};
+      document.querySelectorAll("[data-new-ing-flavor]").forEach(input => {
+        const value = Math.max(0, Math.min(5, Number(input.value) || 0));
+        if (value > 0) flavors[input.dataset.newIngFlavor] = value;
+      });
+      const id = uniqueId(name, state.ingredients);
+      state.ingredients.push({
+        id,
+        name,
+        collective: el("ingredientCollectiveInput").value === "collective",
+        flavors
+      });
+      el("ingredientNameInput").value = "";
+      document.querySelectorAll("[data-new-ing-flavor]").forEach(input => input.value = 0);
+      saveState(); render(); announce("Ingredient added.");
+    }
+
+    function addDish() {
+      if (state.dishes.length >= state.menuSlots) {
+        alert("You need another menu slot before adding this dish.");
+        return;
+      }
+      const name = el("dishNameInput").value.trim();
+      const category = el("dishCategoryInput").value.trim() || "Menu";
+      const base = Array.from(el("dishBaseIngredientChecks").querySelectorAll("input:checked")).map(input => input.value);
+      const optional = Array.from(el("dishOptionalIngredientChecks").querySelectorAll("input:checked")).map(input => input.value).filter(id => !base.includes(id));
+      const price = Math.max(1, Number(el("dishPriceInput").value) || Math.max(5, base.length * 5));
+      if (!name) { alert("Name the dish first."); return; }
+      if (!base.length) { alert("Pick at least one recipe basic."); return; }
+      const id = uniqueId(name, state.dishes);
+      state.dishes.push({
+        id,
+        name,
+        category,
+        collective: el("dishCollectiveInput").value === "collective",
+        baseIngredientIds: base,
+        optionalIngredientIds: optional,
+        price
+      });
+      if (!state.categories.includes(category)) state.categories.push(category);
+      el("dishNameInput").value = "";
+      el("dishCategoryInput").value = "";
+      el("dishPriceInput").value = Math.max(5, base.length * 5);
+      saveState(); render(); announce("Dish added to the menu.");
+    }
+
+    function buySlot() {
+      const cost = menuSlotCost();
+      if (state.coins < cost) return;
+      state.coins -= cost;
+      state.menuSlots += 1;
+      saveState(); render(); announce("New menu slot unlocked.");
+    }
+
+    function newCustomer() {
+      state.currentOrder = makeOrder(state);
+      state.closedDialogOrderId = null;
+      state.potIngredientIds = [];
+      saveState(); render(); announce("A new customer arrived.");
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    }
+
+    function announce(message) {
+      el("liveRegion").textContent = message;
+    }
+
+    function exportSave() {
+      el("saveText").value = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+      el("saveText").select();
+    }
+
+    function importSave() {
+      const raw = el("saveText").value.trim();
+      if (!raw) { alert("Paste a save code first."); return; }
+      try {
+        const imported = JSON.parse(decodeURIComponent(escape(atob(raw))));
+        state = normalizeState({ ...clone(DEFAULT_STATE), ...imported });
+        saveState(); render(); announce("Save imported.");
+      } catch (err) {
+        alert("That save code did not work.");
+      }
+    }
+
+    function resetGame() {
+      if (!confirm("Reset Menu Menace? This clears your local save.")) return;
+      state = startState();
+      saveState(); render(); announce("Game reset.");
+    }
+
+    function wireEvents() {
+      document.querySelectorAll('[role="tab"]').forEach(button => button.addEventListener("click", () => switchTab(button.dataset.tab)));
+      el("serveButton").addEventListener("click", serveOrder);
+      el("serveButtonKitchen").addEventListener("click", serveOrder);
+      el("newCustomerButton").addEventListener("click", newCustomer);
+      el("goKitchenButton").addEventListener("click", () => switchTab("kitchen"));
+      el("manualTrendButton").addEventListener("click", () => { state.trend = makeTrend(state); saveState(); render(); announce("Trend changed."); });
+      el("clearPotButton").addEventListener("click", clearPot);
+      el("addRecipeButton").addEventListener("click", addRecipeBasics);
+      el("saveNamesButton").addEventListener("click", () => {
+        state.restaurantName = el("restaurantNameInput").value.trim() || "Menu Menace";
+        state.chefName = el("chefNameInput").value.trim() || "Chef";
+        saveState(); render(); announce("Names saved.");
+      });
+      el("addFlavorButton").addEventListener("click", addFlavor);
+      el("addIngredientButton").addEventListener("click", addIngredient);
+      el("addDishButton").addEventListener("click", addDish);
+      el("buySlotButton").addEventListener("click", buySlot);
+      el("buyGemButton").addEventListener("click", () => {
+        if (state.coins < 100) return;
+        state.coins -= 100;
+        state.gems += 1;
+        saveState(); render(); announce("You traded coins for a gem.");
+      });
+      el("exportButton").addEventListener("click", exportSave);
+      el("importButton").addEventListener("click", importSave);
+      el("resetButton").addEventListener("click", resetGame);
+
+      const pot = el("pot");
+      pot.addEventListener("dragover", event => {
+        event.preventDefault();
+        pot.classList.add("dragover");
+      });
+      pot.addEventListener("dragleave", () => pot.classList.remove("dragover"));
+      pot.addEventListener("drop", event => {
+        event.preventDefault();
+        pot.classList.remove("dragover");
+        const id = event.dataTransfer.getData("text/plain");
+        addIngredientToPot(id);
+      });
+
+      setInterval(() => {
+        maybeUpdateTrend();
+        renderOrders();
+      }, 1000);
+    }
+
+    try {
+      wireEvents();
+      render();
+    } catch (err) {
+      document.body.insertAdjacentHTML("afterbegin", '<div style="padding:12px;margin:12px;border:3px solid #a32020;background:#fff;color:#24180f;border-radius:12px;"><strong>Menu Menace could not start in this viewer.</strong><br>Open the file in Safari/Chrome instead of a file preview. Error: ' + escapeHtml(err.message || err) + '</div>');
+      console.error(err);
+    }
+  </script>
+</body>
+</html>
