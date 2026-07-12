@@ -167,3 +167,11 @@ V13 UPDATE NOTES
 
 PLAYER TIP
 Menu Menace works best when you give your ingredients strong personalities. A basic ingredient like milk can be creamy, soft, sweet, cold, or moonlit. Coffee can be strong, bitter, smoky, cozy, electric, or magical. Customers will use the words you create, so your restaurant can feel normal, fantasy, silly, dramatic, or completely chaotic.
+
+V14 SMARTER ORDER NOTES
+- Customers are much less likely to ask for a dish with no required/base ingredient.
+- If a dish only has one ingredient, customers will not ask for that dish with none of its only ingredient. So drip coffee should not become "drip coffee with no coffee."
+- Customers are still allowed to be a little chaotic sometimes. A burger with no bun can happen rarely, but it is treated like a silly unusual order instead of a common one.
+- Customers are more likely to ask to hold optional ingredients, like coffee with no milk, than to remove the main thing that makes the dish exist.
+- Substitutions show up a little more often when a dish has them.
+- Rare weird add-on orders now try to pick ingredients that share a flavor vibe with the dish when possible. So a creamy outside ingredient might show up in a coffee order because the customer is chasing a creamy idea, even if the exact ingredient is strange.

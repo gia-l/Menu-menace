@@ -1,9 +1,9 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v13-food-feedback';
-  var PREVIOUS_SAVE_KEYS = ['menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
-  var VERSION = 13;
+  var SAVE_KEY = 'menu-menace-v14-smarter-orders';
+  var PREVIOUS_SAVE_KEYS = ['menu-menace-v13-food-feedback', 'menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
+  var VERSION = 14;
   var modalSaveHandler = null;
   var state = null;
   var saveAvailable = true;
@@ -722,6 +722,32 @@
     return null;
   }
 
+  function topFlavorIdsFromIngredient(id) {
+    var ingredient = getIngredient(id);
+    if (!ingredient) return [];
+    var normalized = normalizeFlavorMap(ingredient.flavors || {});
+    return Object.keys(normalized).filter(function (flavorId) {
+      return normalized[flavorId] > 0;
+    }).sort(function (a, b) {
+      return normalized[b] - normalized[a];
+    }).slice(0, 2);
+  }
+
+  function pickFlavorMatchedWeirdAdd(outsideIds, dish, recipeIngredientIds) {
+    var wanted = {};
+    var sourceIds = recipeIngredientIds && recipeIngredientIds.length ? recipeIngredientIds : (dish && dish.base ? dish.base : []);
+    for (var i = 0; i < sourceIds.length; i++) {
+      var tops = topFlavorIdsFromIngredient(sourceIds[i]);
+      for (var t = 0; t < tops.length; t++) wanted[tops[t]] = true;
+    }
+    var matched = outsideIds.filter(function (id) {
+      var tops = topFlavorIdsFromIngredient(id);
+      for (var j = 0; j < tops.length; j++) if (wanted[tops[j]]) return true;
+      return false;
+    });
+    return randomItem(matched.length ? matched : outsideIds);
+  }
+
   function ingredientName(id, collective) {
     var ingredient = getIngredient(id);
     if (!ingredient) return 'mystery ingredient';
@@ -783,16 +809,23 @@
     var weirdAdd = false;
     var critic = isCriticVisit(dish);
 
-    if (optional.length > 0 && Math.random() < 0.55) required.push(randomItem(optional));
+    if (optional.length > 0 && Math.random() < 0.52) required.push(randomItem(optional));
 
     var possibleSubs = cleanSubstitutions(dish.substitutions || [], state.ingredients.map(function (x) { return x.id; })).filter(function (sub) {
       return recipeIngredients.indexOf(sub.from) !== -1 && sub.to !== sub.from;
     });
-    if (possibleSubs.length > 0 && Math.random() < 0.26) substitution = randomItem(possibleSubs);
+    if (possibleSubs.length > 0 && Math.random() < 0.34) substitution = randomItem(possibleSubs);
 
-    if (recipeIngredients.length > 0 && Math.random() < 0.28) {
-      var avoidPool = recipeIngredients.filter(function (id) { return required.indexOf(id) === -1 && (!substitution || id !== substitution.from); });
-      if (avoidPool.length) excluded.push(randomItem(avoidPool));
+    // Customers can ask to hold an ingredient, but required/base ingredients are much rarer.
+    // Also: if a dish only has one ingredient, nobody should ask for the dish with none of that one thing.
+    if (!substitution && recipeIngredients.length > 1) {
+      var optionalNoPool = optional.filter(function (id) { return required.indexOf(id) === -1; });
+      var baseNoPool = base.filter(function (id) { return required.indexOf(id) === -1; });
+      if (optionalNoPool.length > 0 && Math.random() < 0.24) {
+        excluded.push(randomItem(optionalNoPool));
+      } else if (baseNoPool.length > 1 && Math.random() < 0.075) {
+        excluded.push(randomItem(baseNoPool));
+      }
     }
 
     var extraPool = recipeIngredients.filter(function (id) { return excluded.indexOf(id) === -1; });
@@ -801,8 +834,8 @@
     var outside = state.ingredients.map(function (x) { return x.id; }).filter(function (id) {
       return recipeIngredients.indexOf(id) === -1;
     });
-    if (outside.length > 0 && Math.random() < 0.07) {
-      required.push(randomItem(outside));
+    if (!substitution && outside.length > 0 && Math.random() < 0.075) {
+      required.push(pickFlavorMatchedWeirdAdd(outside, dish, recipeIngredients));
       weirdAdd = true;
     }
 
@@ -974,7 +1007,9 @@
       '{M}, please do not judge me, but I want {DISH} with {WITH}.',
       'I had a dream about {DISH} with {WITH}, and now I need to know if it works.',
       'This is either genius or terrible: {DISH} with {WITH}, please.',
-      'I respect your menu rules, so I am making my own too. {DISH} with {WITH}, please.'
+      'I respect your menu rules, so I am making my own too. {DISH} with {WITH}, please.',
+      'I know {WITH} is not the usual move, but I think it might match the flavor vibe of {DISH}.',
+      'This may sound strange, but {WITH} feels like it belongs with {DISH} in my heart.'
     ];
     var trendTemplates = [
       'I noticed {DISH} is trending today. Can I get that?',
