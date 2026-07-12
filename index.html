@@ -17,7 +17,6 @@
         <h1 id="game-title">Menu Menace</h1>
         <p id="chef-line" class="muted">Chef: Chef</p>
       </div>
-      <button type="button" id="quick-customer" class="primary compact">New customer</button>
     </div>
 
     <section class="stats" aria-label="Restaurant stats">
@@ -201,7 +200,13 @@
             <legend>Optional ingredients customers may request</legend>
             <div id="dish-optional-ingredients" class="check-list"></div>
           </fieldset>
-          <button type="button" id="add-dish">Add dish</button>
+          <fieldset>
+            <legend>Dish flavor profile</legend>
+            <p class="muted small-text">Tap Analyze after choosing ingredients. Menu Menace averages the ingredient flavors, then you can tweak the final dish profile before saving.</p>
+            <button type="button" id="analyze-new-dish" class="secondary">Analyze flavor profile</button>
+            <div id="new-dish-flavor-profile" class="flavor-profile-box"><p class="muted small-text">Pick recipe ingredients, then tap Analyze flavor profile.</p></div>
+          </fieldset>
+          <button type="button" id="add-dish">Finish adding dish</button>
           <div id="dish-manage-list" class="accordion-list"></div>
         </details>
       </article>

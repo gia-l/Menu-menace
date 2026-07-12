@@ -111,3 +111,20 @@ ACCESSIBILITY NOTES
 - Most actions can be done by tapping buttons instead of dragging.
 - Collapsible sections help keep the screen cleaner on phones and iPads.
 - Emojis are optional, so ingredients and dishes still work with text only.
+
+
+V8 dish flavor profiles
+-----------------------
+Dishes now have their own flavor profile, not just their ingredients.
+When you create a dish, choose the base recipe ingredients and tap Analyze flavor profile. The game averages the ingredient flavor profiles into one normalized dish profile. For example, coffee might be strong and milk might be creamy, but the final drink can be tweaked so the recipe feels creamier or stronger depending on your restaurant rules.
+
+When you open a dish in the menu or Build tab, you can now see its full flavor profile. Editing a dish lets you change the name, category, icon, price, recipe ingredients, optional ingredients, and final dish flavor profile in one popover.
+
+
+Version 9 notes
+---------------
+- The extra top New Customer button was removed. Use the New Customer button inside the Counter screen.
+- Dishes now show a full dish flavor profile in their details, not just ingredient profiles.
+- When creating a dish, choose ingredients, tap Analyze flavor profile, then tweak the final recipe flavor profile before saving.
+- Editing a dish opens the full details editor again, including price, category, ingredients, optional ingredients, and dish flavor profile.
+- Existing v7/v8 browser saves are imported automatically when possible.

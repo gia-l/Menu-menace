@@ -1,8 +1,9 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v7-dialogue-readme';
-  var VERSION = 7;
+  var SAVE_KEY = 'menu-menace-v9-dish-flavor-editor';
+  var PREVIOUS_SAVE_KEYS = ['menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
+  var VERSION = 8;
   var modalSaveHandler = null;
   var state = null;
   var saveAvailable = true;
@@ -127,7 +128,7 @@
       { id: 'herbs', name: 'herbs', collective: 'herbs', category: 'Seasonings', icon: '🌿', flavors: { fresh: 100 } }
     ];
     base.dishes = [
-      { id: 'spaghetti', name: 'spaghetti', category: 'Classics', kind: 'collective', price: 20, icon: '🍝', base: ['pasta', 'tomato-sauce', 'herbs'], optional: [] }
+      { id: 'spaghetti', name: 'spaghetti', category: 'Classics', kind: 'collective', price: 20, icon: '🍝', base: ['pasta', 'tomato-sauce', 'herbs'], optional: [], flavors: { savory: 48, sweet: 10, fresh: 42 } }
     ];
     base.currentTrendId = 'savory';
     return base;
@@ -226,6 +227,12 @@
     var loaded = null;
     try {
       loaded = window.localStorage.getItem(SAVE_KEY);
+      if (!loaded) {
+        for (var pk = 0; pk < PREVIOUS_SAVE_KEYS.length; pk++) {
+          loaded = window.localStorage.getItem(PREVIOUS_SAVE_KEYS[pk]);
+          if (loaded) break;
+        }
+      }
     } catch (err) {
       saveAvailable = false;
     }
@@ -345,6 +352,7 @@
     on('add-flavor', 'click', addFlavor);
     on('add-ingredient', 'click', addIngredient);
     on('add-dish', 'click', addDish);
+    on('analyze-new-dish', 'click', analyzeNewDishFlavorProfile);
     on('export-save', 'click', exportSave);
     on('copy-save-text', 'click', copySaveText);
     on('import-save-text', 'click', importSaveText);
@@ -365,7 +373,11 @@
     var priceInput = $('new-dish-price');
     if (priceInput) priceInput.addEventListener('input', updateNewDishPriceHint, false);
     document.addEventListener('change', function (event) {
-      if (event.target && (event.target.className || '').indexOf('base-ingredient-check') !== -1) updateNewDishPriceHint();
+      if (event.target && (event.target.className || '').indexOf('base-ingredient-check') !== -1) {
+        updateNewDishPriceHint();
+        markNewDishProfileStale();
+      }
+      if (event.target && (event.target.className || '').indexOf('new-dish-flavor-input') !== -1) updateNewDishFlavorSummary();
     }, false);
 
     var pot = $('pot');
@@ -421,6 +433,20 @@
     }
 
     state.pot = (state.pot || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
+
+    var flavorIds = state.flavors.map(function (item) { return item.id; });
+    for (var sf = 0; sf < state.dishes.length; sf++) {
+      if (!state.dishes[sf].flavors || !Object.keys(state.dishes[sf].flavors).length) {
+        state.dishes[sf].flavors = finalFlavorProfile(state.dishes[sf].base || []);
+      } else {
+        var clean = {};
+        var fkeys = Object.keys(state.dishes[sf].flavors || {});
+        for (var fk = 0; fk < fkeys.length; fk++) {
+          if (flavorIds.indexOf(fkeys[fk]) !== -1 && Number(state.dishes[sf].flavors[fkeys[fk]]) > 0) clean[fkeys[fk]] = Number(state.dishes[sf].flavors[fkeys[fk]]);
+        }
+        state.dishes[sf].flavors = normalizeFlavorMap(clean);
+      }
+    }
 
     if (state.currentOrder && dishIds.indexOf(state.currentOrder.dishId) === -1) {
       state.currentOrder = null;
@@ -980,6 +1006,7 @@
     body.innerHTML = '<p><strong>Wording:</strong> ' + escapeHTML(dishPhrase(dish)) + '</p>' +
       '<p><strong>Price:</strong> ' + escapeHTML(String(dish.price)) + ' coins <span class="price-pill ' + priceVibe(dish.price, ideal) + '">' + escapeHTML(priceHintText(dish.price, ideal)) + '</span></p>' +
       '<p><strong>Hearts:</strong> ' + escapeHTML(String(stats.hearts || 0)) + ' • <strong>Served:</strong> ' + escapeHTML(String(stats.served || 0)) + '</p>' +
+      '<p><strong>Flavor profile:</strong> ' + escapeHTML(flavorSummary(dishFlavorProfile(dish))) + '</p>' +
       '<p><strong>Base recipe:</strong> ' + escapeHTML(baseNames || 'nothing yet') + '</p>' +
       '<p><strong>Optional:</strong> ' + escapeHTML(optionalNames || 'none') + '</p>';
     if (includeRemove) {
@@ -991,14 +1018,14 @@
       edit.textContent = '✏ Edit dish';
       edit.setAttribute('aria-label', 'Edit dish ' + dish.name);
       edit.setAttribute('data-id', dish.id);
-      edit.addEventListener('click', function () { editDish(this.getAttribute('data-id')); }, false);
+      edit.addEventListener('click', function (event) { event.preventDefault(); event.stopPropagation(); editDish(this.getAttribute('data-id')); }, false);
       actions.appendChild(edit);
       var remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'danger compact';
       remove.textContent = 'Remove dish';
       remove.setAttribute('data-id', dish.id);
-      remove.addEventListener('click', function () { removeDish(this.getAttribute('data-id')); }, false);
+      remove.addEventListener('click', function (event) { event.preventDefault(); event.stopPropagation(); removeDish(this.getAttribute('data-id')); }, false);
       actions.appendChild(remove);
       body.appendChild(actions);
     }
@@ -1127,6 +1154,60 @@
       if (flavor && normalized[keys[i]] > 0) parts.push(flavor.descriptor + ' ' + Math.round(normalized[keys[i]]) + '%');
     }
     return parts.length ? parts.join(', ') : 'neutral';
+  }
+
+  function dishFlavorProfile(dish) {
+    if (!dish) return {};
+    if (dish.flavors && Object.keys(dish.flavors).length) return normalizeFlavorMap(dish.flavors);
+    return finalFlavorProfile(dish.base || []);
+  }
+
+  function profileFromInputs(root, selector) {
+    var map = {};
+    var inputs = root.querySelectorAll(selector);
+    for (var i = 0; i < inputs.length; i++) {
+      var value = Math.max(0, Math.min(100, Number(inputs[i].value) || 0));
+      if (value > 0) map[inputs[i].getAttribute('data-flavor-id')] = value;
+    }
+    return normalizeFlavorMap(map);
+  }
+
+  function renderFlavorProfileEditor(container, profile, className) {
+    container.innerHTML = '';
+    var normalized = normalizeFlavorMap(profile || {});
+    var keys = Object.keys(normalized).sort(function (a, b) { return normalized[b] - normalized[a]; });
+    if (!keys.length) {
+      container.innerHTML = '<p class="muted small-text">No flavor profile yet. Pick recipe ingredients, then analyze.</p>';
+      return;
+    }
+    var grid = document.createElement('div');
+    grid.className = 'small-form-grid flavor-editor-grid';
+    for (var i = 0; i < keys.length; i++) {
+      var flavor = getFlavor(keys[i]);
+      if (!flavor) continue;
+      var label = document.createElement('label');
+      label.textContent = flavor.descriptor + ' / ' + flavor.form;
+      var input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.max = '100';
+      input.step = '1';
+      input.value = String(Math.round(normalized[keys[i]]));
+      input.className = className;
+      input.setAttribute('data-flavor-id', keys[i]);
+      label.appendChild(input);
+      grid.appendChild(label);
+    }
+    container.appendChild(grid);
+    var summary = document.createElement('p');
+    summary.className = 'muted small-text flavor-editor-summary';
+    summary.textContent = 'Current dish profile: ' + flavorSummary(profileFromInputs(container, '.' + className));
+    container.appendChild(summary);
+  }
+
+  function updateFlavorEditorSummary(container, inputClass) {
+    var summary = container.querySelector('.flavor-editor-summary');
+    if (summary) summary.textContent = 'Current dish profile: ' + flavorSummary(profileFromInputs(container, '.' + inputClass));
   }
 
   function normalizeFlavorMap(map) {
@@ -1930,6 +2011,40 @@
     hint.className = 'price-hint ' + vibe;
   }
 
+  function analyzeNewDishFlavorProfile() {
+    var base = checkedValues('.base-ingredient-check');
+    var container = $('new-dish-flavor-profile');
+    if (!container) return;
+    if (!base.length) {
+      container.innerHTML = '<p class="muted small-text">Pick at least one base ingredient first.</p>';
+      return;
+    }
+    var profile = finalFlavorProfile(base);
+    renderFlavorProfileEditor(container, profile, 'new-dish-flavor-input');
+    updateNewDishFlavorSummary();
+    showStatus('Dish flavor profile analyzed. You can tweak it before finishing the dish.');
+  }
+
+  function updateNewDishFlavorSummary() {
+    var container = $('new-dish-flavor-profile');
+    if (!container) return;
+    updateFlavorEditorSummary(container, 'new-dish-flavor-input');
+  }
+
+  function markNewDishProfileStale() {
+    var container = $('new-dish-flavor-profile');
+    if (!container) return;
+    if (container.querySelector('.new-dish-flavor-input')) {
+      var note = document.createElement('p');
+      note.className = 'muted small-text';
+      note.textContent = 'Recipe changed. Tap Analyze flavor profile again to recalculate, or keep editing this profile manually.';
+      if (!container.querySelector('.stale-profile-note')) {
+        note.className += ' stale-profile-note';
+        container.appendChild(note);
+      }
+    }
+  }
+
   function addDish() {
     var name = $('new-dish-name').value.trim();
     var icon = $('new-dish-icon').value.trim();
@@ -1957,11 +2072,14 @@
     }
     optional = optional.filter(function (id) { return base.indexOf(id) === -1; });
     var id = uniqueId(slugify(name), state.dishes.map(function (x) { return x.id; }));
-    state.dishes.push({ id: id, name: name, category: category, kind: kind, price: price, icon: icon, base: base, optional: optional });
+    var profileContainer = $('new-dish-flavor-profile');
+    var flavors = profileContainer && profileContainer.querySelector('.new-dish-flavor-input') ? profileFromInputs(profileContainer, '.new-dish-flavor-input') : finalFlavorProfile(base);
+    state.dishes.push({ id: id, name: name, category: category, kind: kind, price: price, icon: icon, base: base, optional: optional, flavors: flavors });
     $('new-dish-name').value = '';
     $('new-dish-icon').value = '';
     $('new-dish-category').value = '';
     $('new-dish-price').value = '25';
+    if ($('new-dish-flavor-profile')) $('new-dish-flavor-profile').innerHTML = '<p class="muted small-text">Pick recipe ingredients, then tap Analyze flavor profile.</p>';
     saveAndRender('Dish added to the menu.');
   }
 
@@ -2011,26 +2129,44 @@
     addIngredientCheckboxes(baseSet, 'edit-dish-base-check', dish.base || []);
     var optSet = addModalFieldset(form, 'Optional ingredients customers may request');
     addIngredientCheckboxes(optSet, 'edit-dish-optional-check', dish.optional || []);
+    var flavorSet = addModalFieldset(form, 'Dish flavor profile');
+    var flavorBox = document.createElement('div');
+    flavorBox.id = 'edit-dish-flavor-profile';
+    flavorSet.appendChild(flavorBox);
+    var analyzeBtn = document.createElement('button');
+    analyzeBtn.type = 'button';
+    analyzeBtn.className = 'secondary compact';
+    analyzeBtn.textContent = 'Analyze from base recipe';
+    analyzeBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      var recipeProfile = finalFlavorProfile(checkedValuesInside(form, '.edit-dish-base-check'));
+      renderFlavorProfileEditor(flavorBox, recipeProfile, 'edit-dish-flavor-input');
+    }, false);
+    flavorSet.appendChild(analyzeBtn);
+    renderFlavorProfileEditor(flavorBox, dishFlavorProfile(dish), 'edit-dish-flavor-input');
     function refreshEditPriceHint() {
       var fakeDish = { base: checkedValuesInside(form, '.edit-dish-base-check'), optional: checkedValuesInside(form, '.edit-dish-optional-check') };
       var ideal = idealDishPrice(fakeDish);
-      var price = Math.max(1, Math.round(Number($('edit-dish-price').value) || ideal));
+      var price = Math.max(1, Math.round(Number(priceInput.value) || ideal));
       editPriceHint.textContent = priceHintText(price, ideal);
       editPriceHint.className = 'price-hint ' + priceVibe(price, ideal);
     }
     priceInput.addEventListener('input', refreshEditPriceHint, false);
-    form.addEventListener('change', refreshEditPriceHint, false);
+    form.addEventListener('change', function (event) {
+      refreshEditPriceHint();
+      if (event.target && (event.target.className || '').indexOf('edit-dish-flavor-input') !== -1) updateFlavorEditorSummary(flavorBox, 'edit-dish-flavor-input');
+    }, false);
     refreshEditPriceHint();
     var note = document.createElement('p');
     note.className = 'muted small-text';
     note.textContent = 'Tip: “with no” orders only use ingredients in this dish. Weird add-on orders are rare and say they are weird.';
     form.appendChild(note);
     openEditor('Edit dish details', form, function () {
-      var name = $('edit-dish-name').value.trim();
-      var icon = $('edit-dish-icon').value.trim();
-      var category = $('edit-dish-category').value.trim() || 'Menu';
-      var kind = $('edit-dish-kind').value === 'collective' ? 'collective' : 'single';
-      var price = Math.max(1, Math.round(Number($('edit-dish-price').value) || dish.price || 20));
+      var name = form.querySelector('#edit-dish-name').value.trim();
+      var icon = form.querySelector('#edit-dish-icon').value.trim();
+      var category = form.querySelector('#edit-dish-category').value.trim() || 'Menu';
+      var kind = form.querySelector('#edit-dish-kind').value === 'collective' ? 'collective' : 'single';
+      var price = Math.max(1, Math.round(Number(priceInput.value) || dish.price || 20));
       var base = checkedValuesInside(form, '.edit-dish-base-check');
       var optional = checkedValuesInside(form, '.edit-dish-optional-check').filter(function (ingId) { return base.indexOf(ingId) === -1; });
       if (!name) {
@@ -2048,6 +2184,7 @@
       dish.price = price;
       dish.base = base;
       dish.optional = optional;
+      dish.flavors = flavorBox && flavorBox.querySelector('.edit-dish-flavor-input') ? profileFromInputs(flavorBox, '.edit-dish-flavor-input') : finalFlavorProfile(base);
       closeEditor();
       saveAndRender('Dish updated.');
     });
