@@ -125,7 +125,7 @@
 
       <article class="card">
         <h2>Build from scratch</h2>
-        <p class="muted">The game starts with one spaghetti example only. You can delete it and make your own whole restaurant.</p>
+        <p class="muted">The game starts with one spaghetti example only. Icons/emojis are optional, and you can delete everything and make your own whole restaurant.</p>
 
         <details id="flavor-builder" class="builder-panel" open>
           <summary>1. Flavor profiles</summary>
@@ -151,6 +151,9 @@
             <label>Collective/plural name
               <input id="new-ingredient-collective" type="text" placeholder="pepperoni slices">
             </label>
+            <label>Optional icon / emoji
+              <input id="new-ingredient-icon" type="text" placeholder="🍅" inputmode="text" autocomplete="off">
+            </label>
             <label>Ingredient category
               <input id="new-ingredient-category" type="text" placeholder="Toppings" value="Ingredients">
             </label>
@@ -169,6 +172,9 @@
           <div class="form-grid">
             <label>Dish name
               <input id="new-dish-name" type="text" placeholder="hamburger">
+            </label>
+            <label>Optional icon / emoji
+              <input id="new-dish-icon" type="text" placeholder="🍔" inputmode="text" autocomplete="off">
             </label>
             <label>Dish category
               <input id="new-dish-category" type="text" placeholder="Sandwiches">
@@ -245,6 +251,18 @@
       </article>
     </section>
   </main>
+
+
+  <div id="edit-modal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h2 id="modal-title">Edit details</h2>
+      <div id="modal-body"></div>
+      <div class="button-row modal-actions">
+        <button type="button" id="modal-save" class="primary">Save changes</button>
+        <button type="button" id="modal-cancel" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <noscript>
     <div class="noscript-warning">This game needs JavaScript enabled. Open index.html in Safari or Chrome from the unzipped folder.</div>

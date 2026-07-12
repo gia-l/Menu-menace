@@ -331,7 +331,7 @@ legend { font-weight: 950; }
   min-height: 74px;
   word-break: normal;
 }
-.ingredient-card strong { display: block; margin-bottom: 4px; }
+.ingredient-card strong, .item-name { display: block; margin-bottom: 4px; font-size: 1.06rem; }
 
 .check-list {
   display: grid;
@@ -364,7 +364,7 @@ legend { font-weight: 950; }
 }
 .pot.dragover { border-color: var(--accent); }
 .pot-empty { margin: 0; color: var(--muted); font-weight: 800; }
-.tag { display: inline-flex; gap: 8px; align-items: center; }
+.tag { display: inline-flex; gap: 8px; align-items: center; font-weight: 850; }
 .tag button { min-height: 34px; padding: 4px 8px; border-radius: 10px; }
 
 .recipe-helper ul { padding-left: 20px; margin-bottom: 12px; }
@@ -418,4 +418,36 @@ legend { font-weight: 950; }
   .manage-actions button { flex: 1 1 120px; }
   .ingredient-grid { grid-template-columns: 1fr; }
   .tabs button { padding-left: 6px; padding-right: 6px; font-size: .92rem; }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(20, 12, 6, .45);
+  padding: 16px;
+  overflow: auto;
+}
+.modal-card {
+  max-width: 760px;
+  margin: 24px auto;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+  padding: 16px;
+}
+.modal-form {
+  display: grid;
+  gap: 12px;
+}
+.modal-form fieldset {
+  margin: 0;
+}
+.modal-actions {
+  margin-top: 14px;
+}
+@media (max-width: 620px) {
+  .modal-backdrop { padding: 8px; }
+  .modal-card { margin: 8px auto; padding: 12px; }
 }
