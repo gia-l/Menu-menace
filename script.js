@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v5-details-editors';
-  var VERSION = 5;
+  var SAVE_KEY = 'menu-menace-v7-dialogue-readme';
+  var VERSION = 7;
   var modalSaveHandler = null;
   var state = null;
   var saveAvailable = true;
@@ -24,14 +24,26 @@
   ];
 
   var positiveTemplates = [
-    'The {F} of the {DISH} is perfect for this dish.',
+    'The {F} of the {DISH} is perfect, {M}.',
     'I really like how the {F} and {F2} complement each other.',
     'The {DISH} is really {DE}. I like it!',
-    'The {DISH} is really {F}-forward. Great job.',
+    'The {DISH} is really {F}-forward. Great job, {M}.',
     'Ooh, so {DE}! Nice!',
     'I think your {DISH} is kinda {DE}. It is a little unusual, but it works so well.',
     'I like how it is not too {LOW_DE}. Good job.',
-    'The {F} really stood out in this dish and it balances well with the {I}.'
+    'The {F} really stood out in this dish and it balances well with the {I}.',
+    'The {F} of the {DISH} is absolutely phenomenal, {M}.',
+    'I loved how {DE} this tasted. You really made it work, {M}.',
+    'The {I} made this feel extra special.',
+    'This {DISH} tastes like it belongs on a real signature menu.',
+    'I came in hungry and left impressed. The {F} was so good.',
+    '{M}, this {DISH} has personality in the best way.',
+    'I loved how fresh the {I} tasted in this {DISH}.',
+    'This is exactly why I like places where the chef makes their own rules.',
+    'The balance here is so nice. The {F} did not overpower the {F2}.',
+    'That {DISH} was cozy, creative, and honestly really fun.',
+    'I would absolutely order this again.',
+    'This {DISH} feels like something only {RESTAURANT} would make.'
   ];
 
   var critiqueTemplates = [
@@ -49,7 +61,25 @@
     { id: 'berry', name: 'Berry Bakery', cost: 3 },
     { id: 'mint', name: 'Mint Bistro', cost: 5 },
     { id: 'lavender', name: 'Lavender Lounge', cost: 6 },
-    { id: 'night', name: 'Night Market', cost: 8 }
+    { id: 'night', name: 'Night Market', cost: 8 },
+    { id: 'sunset', name: 'Sunset Diner', cost: 10 },
+    { id: 'ocean', name: 'Ocean Patio', cost: 12 },
+    { id: 'cocoa', name: 'Cozy Cocoa', cost: 14 }
+  ];
+
+  var upgrades = [
+    { id: 'nice-napkins', name: 'Nice Napkins', costType: 'coins', cost: 50, kind: 'heart', amount: 3, description: '+3% heart chance' },
+    { id: 'fresh-sign', name: 'Fresh Chalkboard Sign', costType: 'coins', cost: 90, kind: 'star', amount: 2, description: '+2% bonus star chance' },
+    { id: 'window-planters', name: 'Window Planters', costType: 'coins', cost: 140, kind: 'heart', amount: 5, description: '+5% heart chance' },
+    { id: 'cozy-tables', name: 'Cozy Tables', costType: 'coins', cost: 220, kind: 'heart', amount: 7, description: '+7% heart chance' },
+    { id: 'local-flyers', name: 'Local Flyers', costType: 'coins', cost: 320, kind: 'star', amount: 5, description: '+5% bonus star chance' },
+    { id: 'fancy-plates', name: 'Fancy Plates', costType: 'coins', cost: 480, kind: 'heart', amount: 10, description: '+10% heart chance' },
+    { id: 'food-blog-post', name: 'Food Blog Post', costType: 'coins', cost: 700, kind: 'star', amount: 8, description: '+8% bonus star chance' },
+    { id: 'billboard', name: 'Billboard Outside', costType: 'coins', cost: 1000, kind: 'heart', amount: 14, description: '+14% heart chance' },
+    { id: 'radio-mention', name: 'Radio Mention', costType: 'coins', cost: 1500, kind: 'star', amount: 12, description: '+12% bonus star chance' },
+    { id: 'celebrity-endorsement', name: 'Celebrity Endorsement', costType: 'coins', cost: 3000, kind: 'heart', amount: 22, description: '+22% heart chance' },
+    { id: 'sparkly-counter', name: 'Sparkly Counter', costType: 'gems', cost: 8, kind: 'heart', amount: 6, description: '+6% heart chance' },
+    { id: 'gold-menu', name: 'Gold Menu Frame', costType: 'gems', cost: 15, kind: 'star', amount: 10, description: '+10% bonus star chance' }
   ];
 
   function starterState(blank) {
@@ -71,6 +101,13 @@
       dialogueHidden: true,
       lastReward: null,
       manualRerolls: 0,
+      customersServed: 0,
+      stars: 0,
+      totalHearts: 0,
+      lastHeartStarAward: 0,
+      ownedUpgrades: [],
+      dishStats: {},
+      currentTrend: null,
       pot: [],
       flavors: [],
       ingredients: [],
@@ -218,6 +255,12 @@
     if (!Array.isArray(base.dishes)) base.dishes = [];
     if (!Array.isArray(base.ownedThemes) || !base.ownedThemes.length) base.ownedThemes = ['classic'];
     if (!Array.isArray(base.pot)) base.pot = [];
+    if (!Array.isArray(base.ownedUpgrades)) base.ownedUpgrades = [];
+    if (!base.dishStats || typeof base.dishStats !== 'object') base.dishStats = {};
+    if (typeof base.customersServed !== 'number') base.customersServed = 0;
+    if (typeof base.stars !== 'number') base.stars = 0;
+    if (typeof base.totalHearts !== 'number') base.totalHearts = 0;
+    if (typeof base.lastHeartStarAward !== 'number') base.lastHeartStarAward = 0;
     if (!base.currentTheme) base.currentTheme = 'classic';
     if (typeof base.dialogueText !== 'string') base.dialogueText = '';
     if (typeof base.dialogueHidden !== 'boolean') base.dialogueHidden = true;
@@ -254,6 +297,8 @@
     if (base.currentTrendId && !getFlavorFrom(base.flavors, base.currentTrendId)) {
       base.currentTrendId = base.flavors.length ? base.flavors[0].id : null;
     }
+    if (!base.currentTrend && base.currentTrendId) base.currentTrend = { type: 'flavor', id: base.currentTrendId };
+    ensureDishStats(base);
     return base;
   }
 
@@ -317,6 +362,12 @@
     var importInput = $('import-save');
     if (importInput) importInput.addEventListener('change', importSaveFile, false);
 
+    var priceInput = $('new-dish-price');
+    if (priceInput) priceInput.addEventListener('input', updateNewDishPriceHint, false);
+    document.addEventListener('change', function (event) {
+      if (event.target && (event.target.className || '').indexOf('base-ingredient-check') !== -1) updateNewDishPriceHint();
+    }, false);
+
     var pot = $('pot');
     if (pot) {
       pot.addEventListener('dragover', function (event) {
@@ -379,11 +430,14 @@
     if (state.currentOrder) {
       state.currentOrder.required = (state.currentOrder.required || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
       state.currentOrder.excluded = (state.currentOrder.excluded || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
+      state.currentOrder.extra = (state.currentOrder.extra || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
     }
 
     if (state.currentTrendId && !getFlavor(state.currentTrendId)) {
       state.currentTrendId = state.flavors.length ? state.flavors[0].id : null;
     }
+    if (state.currentTrend && !isTrendValid(state.currentTrend)) state.currentTrend = null;
+    ensureDishStats(state);
   }
 
   function renderAll() {
@@ -393,7 +447,8 @@
     renderMenu();
     renderKitchen();
     renderCustomize();
-    renderCosmetics();
+    renderStatsTab();
+    renderShop();
     renderSettings();
     applyTheme();
   }
@@ -406,6 +461,8 @@
     $('level-stat').textContent = state.level || 1;
     $('xp-stat').textContent = (state.xp || 0) + ' / ' + xpToNextLevel();
     $('slot-stat').textContent = state.dishes.length + ' / ' + state.menuSlots;
+    if ($('stars-stat')) $('stars-stat').textContent = state.stars || 0;
+    if ($('hearts-stat')) $('hearts-stat').textContent = state.totalHearts || 0;
   }
 
   function applyTheme() {
@@ -417,14 +474,24 @@
 
   function maybeRefreshTrend() {
     var fifteenMinutes = 15 * 60 * 1000;
-    if (!state.flavors.length) {
+    if (!state.flavors.length && !state.dishes.length) {
+      state.currentTrend = null;
       state.currentTrendId = null;
       return;
     }
-    if (!state.currentTrendId || !state.trendStartedAt || Date.now() - state.trendStartedAt >= fifteenMinutes) {
+    if (!state.currentTrend && state.currentTrendId) state.currentTrend = { type: 'flavor', id: state.currentTrendId };
+    if (!isTrendValid(state.currentTrend) || !state.trendStartedAt || Date.now() - state.trendStartedAt >= fifteenMinutes) {
       state.manualRerolls = 0;
       chooseNewTrend(false, '');
     }
+  }
+
+  function isTrendValid(trend) {
+    if (!trend) return false;
+    if (trend.type === 'flavor') return !!getFlavor(trend.id);
+    if (trend.type === 'dish') return !!getDish(trend.id);
+    if (trend.type === 'bargain' || trend.type === 'fancy') return state.dishes.length > 0;
+    return false;
   }
 
   function trendRerollCost() {
@@ -436,14 +503,9 @@
   }
 
   function rerollTrend() {
-    if (!state.flavors.length) {
-      showStatus('Create a flavor first, then trends can start.');
+    if (!state.flavors.length && !state.dishes.length) {
+      showStatus('Create a flavor or dish first, then trends can start.');
       switchTab('customize');
-      openDetails('flavor-builder');
-      return;
-    }
-    if (state.flavors.length < 2) {
-      showStatus('Add at least two flavors before rerolling trends.');
       return;
     }
 
@@ -461,41 +523,72 @@
     }
 
     state.manualRerolls = (state.manualRerolls || 0) + 1;
-    chooseNewTrend(true, paid + ' New trend picked from your flavor profiles!');
+    chooseNewTrend(true, paid + ' New restaurant trend picked!');
+  }
+
+  function availableTrends() {
+    var list = [];
+    for (var i = 0; i < state.flavors.length; i++) list.push({ type: 'flavor', id: state.flavors[i].id });
+    for (var d = 0; d < state.dishes.length; d++) list.push({ type: 'dish', id: state.dishes[d].id });
+    if (state.dishes.length) {
+      list.push({ type: 'bargain', id: 'bargain' });
+      list.push({ type: 'fancy', id: 'fancy' });
+    }
+    return list;
+  }
+
+  function sameTrend(a, b) {
+    return a && b && a.type === b.type && a.id === b.id;
   }
 
   function chooseNewTrend(showMessage, message) {
-    if (!state.flavors.length) {
+    var list = availableTrends();
+    if (!list.length) {
+      state.currentTrend = null;
       state.currentTrendId = null;
       state.trendStartedAt = Date.now();
-      saveAndRender(showMessage ? 'Create a flavor first, then trends can start.' : '');
+      saveAndRender(showMessage ? 'Create something first, then trends can start.' : '');
       return;
     }
 
-    var next = randomItem(state.flavors).id;
-    if (state.flavors.length > 1) {
-      while (next === state.currentTrendId) next = randomItem(state.flavors).id;
+    var next = randomItem(list);
+    if (list.length > 1) {
+      while (sameTrend(next, state.currentTrend)) next = randomItem(list);
     }
-    state.currentTrendId = next;
+    state.currentTrend = next;
+    state.currentTrendId = next.type === 'flavor' ? next.id : null;
     state.trendStartedAt = Date.now();
-    saveAndRender(showMessage ? (message || 'New trend picked from your flavor profiles!') : '');
+    saveAndRender(showMessage ? (message || 'New restaurant trend picked!') : '');
   }
 
   function renderTrend() {
-    var flavor = getFlavor(state.currentTrendId);
+    var trend = state.currentTrend || (state.currentTrendId ? { type: 'flavor', id: state.currentTrendId } : null);
     var rerollButton = $('reroll-trend');
     var cost = trendRerollCost();
     if (rerollButton) {
       rerollButton.textContent = 'Reroll (' + cost.gems + ' gems / ' + cost.coins + ' coins)';
-      rerollButton.disabled = state.flavors.length < 2;
+      rerollButton.disabled = availableTrends().length < 2;
     }
-    if (!flavor) {
+    if (!isTrendValid(trend)) {
       $('trend-text').textContent = 'No trend yet';
-      $('trend-help').textContent = 'Create at least one flavor profile in Build to start trends.';
+      $('trend-help').textContent = 'Create a flavor or dish in Build to start trends.';
       return;
     }
-    $('trend-text').textContent = flavor.descriptor + ' dishes';
-    $('trend-help').textContent = 'A dish with at least 50% ' + flavor.form + ' gets a bonus tip. Manual rerolls get more expensive until the next timed trend.';
+    if (trend.type === 'flavor') {
+      var flavor = getFlavor(trend.id);
+      $('trend-text').textContent = flavor.descriptor + ' dishes';
+      $('trend-help').textContent = 'A dish with at least 50% ' + flavor.form + ' gets a bonus tip. Trends only use your restaurant\'s flavors and dishes.';
+    } else if (trend.type === 'dish') {
+      var dish = getDish(trend.id);
+      $('trend-text').textContent = dishLabel(dish) + ' is trending';
+      $('trend-help').textContent = 'Customers are more likely to ask for this dish, and perfect orders can earn bonus hearts.';
+    } else if (trend.type === 'bargain') {
+      $('trend-text').textContent = 'Bargain bites';
+      $('trend-help').textContent = 'Cheaper-than-ideal dishes feel like a deal and can earn bargain dialogue.';
+    } else {
+      $('trend-text').textContent = 'Fancy plates';
+      $('trend-help').textContent = 'Pricier dishes feel fancy and can attract customers who want something special.';
+    }
   }
 
   function getFlavor(id) {
@@ -563,27 +656,30 @@
       return;
     }
 
-    var dish = randomItem(state.dishes);
+    var dish = pickDishForCustomer();
     var base = Array.isArray(dish.base) ? dish.base.slice() : [];
     var optional = Array.isArray(dish.optional) ? dish.optional.slice() : [];
     var recipeIngredients = unique(base.concat(optional));
     var required = [];
     var excluded = [];
+    var extra = [];
     var weirdAdd = false;
+    var critic = isCriticVisit(dish);
 
-    if (optional.length > 0 && Math.random() < 0.55) {
-      required.push(randomItem(optional));
-    }
+    if (optional.length > 0 && Math.random() < 0.55) required.push(randomItem(optional));
 
-    if (recipeIngredients.length > 0 && Math.random() < 0.35) {
+    if (recipeIngredients.length > 0 && Math.random() < 0.28) {
       var avoidPool = recipeIngredients.filter(function (id) { return required.indexOf(id) === -1; });
       if (avoidPool.length) excluded.push(randomItem(avoidPool));
     }
 
+    var extraPool = recipeIngredients.filter(function (id) { return excluded.indexOf(id) === -1; });
+    if (!required.length && !excluded.length && extraPool.length > 0 && Math.random() < 0.22) extra.push(randomItem(extraPool));
+
     var outside = state.ingredients.map(function (x) { return x.id; }).filter(function (id) {
       return recipeIngredients.indexOf(id) === -1;
     });
-    if (outside.length > 0 && Math.random() < 0.08) {
+    if (outside.length > 0 && Math.random() < 0.07) {
       required.push(randomItem(outside));
       weirdAdd = true;
     }
@@ -593,7 +689,9 @@
       dishId: dish.id,
       required: unique(required),
       excluded: unique(excluded),
+      extra: extra,
       weirdAdd: weirdAdd,
+      critic: critic,
       text: ''
     };
     order.text = buildOrderText(order);
@@ -604,53 +702,183 @@
     showCustomerBubble(order.text, null);
   }
 
+  function pickDishForCustomer() {
+    var weighted = [];
+    var trend = state.currentTrend;
+    for (var i = 0; i < state.dishes.length; i++) {
+      var dish = state.dishes[i];
+      var weight = 8;
+      var ideal = idealDishPrice(dish);
+      var vibe = priceVibe(dish.price, ideal);
+      var stats = dishStat(dish.id);
+      if (trend && trend.type === 'dish' && trend.id === dish.id) weight += 10;
+      if (trend && trend.type === 'bargain' && vibe === 'cheap') weight += 7;
+      if (trend && trend.type === 'fancy' && vibe === 'expensive') weight += 7;
+      weight += Math.min(10, Math.floor((stats.hearts || 0) / 3));
+      if (vibe === 'cheap') weight += 2;
+      if (vibe === 'expensive') weight += 1;
+      for (var n = 0; n < weight; n++) weighted.push(dish);
+    }
+    return randomItem(weighted.length ? weighted : state.dishes);
+  }
+
+  function isCriticVisit(dish) {
+    var stats = dishStat(dish.id);
+    var hearts = stats.hearts || 0;
+    if (hearts < 20) return false;
+    var chance = hearts >= 30 ? 0.12 : 0.06;
+    return Math.random() < chance;
+  }
+
   function buildOrderText(order) {
     var dish = getDish(order.dishId);
     var required = order.required || [];
     var excluded = order.excluded || [];
+    var extra = order.extra || [];
     var withText = listIngredientNames(required, true);
     var withoutText = listIngredientNames(excluded, true);
+    var extraText = listIngredientNames(extra, true);
     var dishText = dishPhrase(dish);
+    var stats = dish ? dishStat(dish.id) : { hearts: 0 };
+    var trend = state.currentTrend;
+    var ideal = dish ? idealDishPrice(dish) : 0;
+    var vibe = dish ? priceVibe(dish.price, ideal) : 'ideal';
 
     var plainTemplates = [
       'Hello, {M}! Can I get {DISH} please? Thanks!',
-      'I just want {DISH}. That is all.',
+      'Hey there, {M}. I just want {DISH}. That is all.',
       'I\'ll just have {DISH} and I\'ll get outta your hair.',
       'I would give you my {BODY_PART} if I could have {DISH}.',
-      'Hi there, dear! May I please have {DISH}?'
+      'Hi there, dear! May I please have {DISH}?',
+      'Chef {M}, your menu caught my eye. Can I try {DISH}?',
+      'I\'m keeping it simple today. {DISH}, please.',
+      'Could I please get {DISH}? I\'ve been thinking about it since I walked in.',
+      'Hi {M}, I\'ll have {DISH}. Surprise me with your best version.',
+      'One {DISH}, please. No drama, just dinner.',
+      'I saw {DISH} on the menu and immediately knew what I wanted.',
+      'Can I get {DISH}? It sounds very {RESTAURANT} in the best way.'
     ];
     var withTemplates = [
       'Hello! I\'d like {DISH} with {WITH}, please.',
       'Heya friend! Could I please have {DISH} with {WITH}?',
       'May I please have {DISH}? I would appreciate it if you added {WITH}.',
-      'Hi, umm, like can I get {DISH} with {WITH} on that?'
+      'Hi, umm, like can I get {DISH} with {WITH} on that?',
+      'Hey there, {M}, can you make {DISH} with {WITH}?',
+      'I know exactly what I want: {DISH} with {WITH}.',
+      'Could you add {WITH} to {DISH}? I think it would be perfect.',
+      '{DISH} sounds amazing. Could you make it with {WITH}?',
+      'I\'m in a {WITH} mood today. Can I have {DISH} with that?',
+      'Chef {M}, please make me {DISH} with {WITH}.'
     ];
     var withoutTemplates = [
       'Hello! I\'d like {DISH} with no {WITHOUT}, please.',
       'Please, just don\'t put {WITHOUT} on my {DISH}.',
-      'Hi there, dear! May I please have {DISH} without {WITHOUT}?'
+      'Hi there, dear! May I please have {DISH} without {WITHOUT}?',
+      'Could I get {DISH}, but skip the {WITHOUT}? Thanks, {M}.',
+      'I love {DISH}, but today I need it with no {WITHOUT}.',
+      'Can you make {DISH} without {WITHOUT}? That would be amazing.',
+      'No {WITHOUT} on the {DISH}, please. Everything else is fine.',
+      'Chef {M}, I\'ll have {DISH}, just hold the {WITHOUT}.'
+    ];
+    var extraTemplates = [
+      'Could I get {DISH} with extra {EXTRA}?',
+      'I\'d love {DISH}, and please make it extra {EXTRA}.',
+      'Can I have {DISH} with extra {EXTRA}? I\'m craving that today.',
+      'Hello! {DISH} with extra {EXTRA}, please.',
+      'Hey {M}, can you double up the {EXTRA} on my {DISH}?',
+      'I want {DISH}, but make the {EXTRA} impossible to miss.',
+      'Extra {EXTRA} on {DISH}, please. I am very serious about this.',
+      'Could you give my {DISH} one extra helping of {EXTRA}?',
+      'Today feels like an extra {EXTRA} kind of day. {DISH}, please.',
+      'Chef {M}, I trust you. Give me {DISH} with extra {EXTRA}.'
     ];
     var bothTemplates = [
-      'My order might seem a bit complicated, but I would love {DISH} with {WITH} and no {WITHOUT}.',
-      'Could I get {DISH} with {WITH}, but without {WITHOUT}? Thanks!'
+      'My order might seem a bit complicated, {M}, but I would love {DISH} with {WITH} and no {WITHOUT}.',
+      'Could I get {DISH} with {WITH}, but without {WITHOUT}? Thanks!',
+      'Okay, chef, tiny request: {DISH} with {WITH}, but please skip {WITHOUT}.',
+      'I know this has a few steps, but can I get {DISH} with {WITH} and no {WITHOUT}?',
+      'For my {DISH}, add {WITH}, hold the {WITHOUT}. You got this, {M}.',
+      'Could you make {DISH} with {WITH}, but leave off {WITHOUT}?'
     ];
     var weirdTemplates = [
       'I know this sounds strange, but can I have {DISH} with {WITH}? I just want to try something weird.',
-      'This might be a chaotic order, but could you add {WITH} to {DISH}?'
+      'This might be a chaotic order, but could you add {WITH} to {DISH}?',
+      'Chef {M}, please do not judge me, but I want {DISH} with {WITH}.',
+      'I had a dream about {DISH} with {WITH}, and now I need to know if it works.',
+      'This is either genius or terrible: {DISH} with {WITH}, please.',
+      'I respect your menu rules, so I am making my own too. {DISH} with {WITH}, please.'
+    ];
+    var trendTemplates = [
+      'I noticed {DISH} is trending today. Can I get that?',
+      'Everyone keeps talking about your {PLAIN}. May I try {DISH}?',
+      'I heard {M}\'s {PLAIN} is the thing to get today. I\'ll have {DISH}.',
+      '{DISH} is trending? Okay, I need to try it.',
+      'The trend board told me to order {DISH}, and honestly, I listen to the board.',
+      'Hi {M}, I saw {PLAIN} is having a moment. Can I try {DISH}?',
+      'Your {PLAIN} is everywhere today. One {DISH}, please.',
+      'If {DISH} is trending, I want to be part of the trend.'
+    ];
+    var bargainTemplates = [
+      'I saw {DISH} is a little cheaper than usual. What a bargain! Can I get that?',
+      'Yay, I can finally afford {DISH}. Can I have one?',
+      'That price on {DISH} looks amazing. I\'ll take it!',
+      'I came in for the deal. Can I get {DISH}?',
+      'Hi {M}, the {PLAIN} price is calling my name.',
+      'A good deal and a good dish? Give me {DISH}.',
+      'I love a bargain bite. Can I get {DISH}?',
+      'The {PLAIN} is three-coin-sale-energy today. I want it.'
+    ];
+    var fancyTemplates = [
+      'I want something that feels fancy today. Could I have {DISH}?',
+      'That {PLAIN} looks premium. I\'ll try {DISH}.',
+      'I\'m treating myself today. Can I get {DISH}?',
+      'Your {PLAIN} sounds fancy, and I am here for it.',
+      'Chef {M}, I want the kind of meal that feels important. {DISH}, please.',
+      'The {PLAIN} sounds like a special occasion dish.',
+      'I saved up for something nice. Can I get {DISH}?',
+      'Make me feel rich for five minutes. {DISH}, please.'
+    ];
+    var popularTemplates = [
+      'I heard your {PLAIN} is getting really popular. Can I have {DISH}?',
+      'People keep saying your {PLAIN} is worth trying. I\'ll have {DISH}.',
+      'Apparently {M}\'s famous {PLAIN} is delicious. Can I get {DISH}?',
+      'I keep seeing hearts on the {PLAIN}. I need to know what the hype is about.',
+      'Your {PLAIN} has fans now, {M}. Add me to the list.',
+      'Everyone says {RESTAURANT} makes a great {PLAIN}. One {DISH}, please.',
+      'I heard this place has a signature {PLAIN}. I want {DISH}.',
+      'If the regulars love {PLAIN}, I probably will too.'
+    ];
+    var criticTemplates = [
+      'Hello, I\'m a local food critic. Everyone told me to try {M}\'s famous {PLAIN}. May I have {DISH}?',
+      'I\'m reviewing {RESTAURANT} today, and I keep hearing about the {PLAIN}. I\'ll have {DISH}.',
+      'I\'m a food critic, and your {PLAIN} has a reputation. Please make me {DISH} with no extra stuff.',
+      'Chef {M}, I follow rising restaurant stars, and your {PLAIN} keeps coming up. I\'ll try {DISH}.',
+      'I\'m here to see if the rumors about {RESTAURANT} are true. Start me with {DISH}.',
+      'People say your menu has its own rules. I want to taste that in {DISH}.',
+      'I\'m writing a local food column, and {M}\'s {PLAIN} is on my list today.'
     ];
 
     var template;
-    if (order.weirdAdd && required.length) template = randomItem(weirdTemplates);
+    if (order.critic) template = randomItem(criticTemplates);
+    else if (order.weirdAdd && required.length) template = randomItem(weirdTemplates);
+    else if (extra.length && !required.length && !excluded.length) template = randomItem(extraTemplates);
     else if (required.length && excluded.length) template = randomItem(bothTemplates);
     else if (required.length) template = randomItem(withTemplates);
     else if (excluded.length) template = randomItem(withoutTemplates);
+    else if (trend && trend.type === 'dish' && dish && trend.id === dish.id && Math.random() < 0.7) template = randomItem(trendTemplates);
+    else if (trend && trend.type === 'bargain' && vibe === 'cheap' && Math.random() < 0.7) template = randomItem(bargainTemplates);
+    else if (trend && trend.type === 'fancy' && vibe === 'expensive' && Math.random() < 0.7) template = randomItem(fancyTemplates);
+    else if ((stats.hearts || 0) >= 10 && Math.random() < 0.35) template = randomItem(popularTemplates);
     else template = randomItem(plainTemplates);
 
     return template
       .replace(/\{M\}/g, state.chefName || 'Chef')
+      .replace(/\{RESTAURANT\}/g, state.restaurantName || 'Menu Menace')
       .replace(/\{DISH\}/g, dishText)
+      .replace(/\{PLAIN\}/g, dishPlain(dish))
       .replace(/\{WITH\}/g, withText)
       .replace(/\{WITHOUT\}/g, withoutText)
+      .replace(/\{EXTRA\}/g, extraText)
       .replace(/\{BODY_PART\}/g, randomItem(bodyParts));
   }
 
@@ -707,6 +935,8 @@
     if (reward.gems > 0) parts.push('+' + reward.gems + ' gems');
     if (reward.levels > 0) parts.push('level up!');
     if (reward.trendBonus > 0) parts.push('trend bonus +' + reward.trendBonus);
+    if (reward.hearts > 0) parts.push('+1 heart');
+    if (reward.stars > 0) parts.push('+' + reward.stars + ' star');
     if (reward.missing > 0) parts.push(reward.missing + ' missing');
     if (reward.extras > 0) parts.push(reward.extras + ' extra');
     return parts.join(' • ');
@@ -745,7 +975,11 @@
     body.className = 'dish-body';
     var baseNames = (dish.base || []).map(function (id) { return ingredientName(id, true); }).join(', ');
     var optionalNames = (dish.optional || []).map(function (id) { return ingredientName(id, true); }).join(', ');
+    var stats = dishStat(dish.id);
+    var ideal = idealDishPrice(dish);
     body.innerHTML = '<p><strong>Wording:</strong> ' + escapeHTML(dishPhrase(dish)) + '</p>' +
+      '<p><strong>Price:</strong> ' + escapeHTML(String(dish.price)) + ' coins <span class="price-pill ' + priceVibe(dish.price, ideal) + '">' + escapeHTML(priceHintText(dish.price, ideal)) + '</span></p>' +
+      '<p><strong>Hearts:</strong> ' + escapeHTML(String(stats.hearts || 0)) + ' • <strong>Served:</strong> ' + escapeHTML(String(stats.served || 0)) + '</p>' +
       '<p><strong>Base recipe:</strong> ' + escapeHTML(baseNames || 'nothing yet') + '</p>' +
       '<p><strong>Optional:</strong> ' + escapeHTML(optionalNames || 'none') + '</p>';
     if (includeRemove) {
@@ -930,7 +1164,39 @@
     var dish = getDish(order.dishId);
     var base = dish && Array.isArray(dish.base) ? dish.base.slice() : [];
     var required = order && Array.isArray(order.required) ? order.required.slice() : [];
-    return unique(base.concat(required)).filter(function (id) { return (order.excluded || []).indexOf(id) === -1; });
+    var extra = order && Array.isArray(order.extra) ? order.extra.slice() : [];
+    var excluded = order && Array.isArray(order.excluded) ? order.excluded : [];
+    var result = [];
+    for (var i = 0; i < base.length; i++) if (excluded.indexOf(base[i]) === -1) result.push(base[i]);
+    for (var r = 0; r < required.length; r++) if (excluded.indexOf(required[r]) === -1 && result.indexOf(required[r]) === -1) result.push(required[r]);
+    for (var e = 0; e < extra.length; e++) if (excluded.indexOf(extra[e]) === -1) result.push(extra[e]);
+    return result;
+  }
+
+  function countMap(list) {
+    var map = {};
+    for (var i = 0; i < list.length; i++) map[list[i]] = (map[list[i]] || 0) + 1;
+    return map;
+  }
+
+  function compareIngredients(expected, pot, excluded) {
+    var exp = countMap(expected || []);
+    var got = countMap(pot || []);
+    var missing = [];
+    var extras = [];
+    var id;
+    for (id in exp) {
+      if (!Object.prototype.hasOwnProperty.call(exp, id)) continue;
+      var deficit = exp[id] - (got[id] || 0);
+      for (var m = 0; m < deficit; m++) missing.push(id);
+    }
+    for (id in got) {
+      if (!Object.prototype.hasOwnProperty.call(got, id)) continue;
+      var extraCount = got[id] - (exp[id] || 0);
+      if ((excluded || []).indexOf(id) !== -1) extraCount = got[id];
+      for (var x = 0; x < extraCount; x++) extras.push(id);
+    }
+    return { missing: missing, extras: extras };
   }
 
   function serveFood() {
@@ -944,25 +1210,27 @@
     var expected = expectedIngredients(order);
     var excluded = order.excluded || [];
     var pot = state.pot.slice();
-    var missing = [];
-    var extras = [];
-    var i;
-
-    for (i = 0; i < expected.length; i++) if (pot.indexOf(expected[i]) === -1) missing.push(expected[i]);
-    for (i = 0; i < pot.length; i++) if (expected.indexOf(pot[i]) === -1 || excluded.indexOf(pot[i]) !== -1) extras.push(pot[i]);
+    var compared = compareIngredients(expected, pot, excluded);
+    var missing = compared.missing;
+    var extras = compared.extras;
 
     var mistakeCount = missing.length + extras.length;
     var basePay = dish ? Number(dish.price) || 20 : 20;
     var ingredientPay = pot.length * 5;
-    var trendBonus = isTrendingDish(pot) ? Math.ceil(basePay * 0.35) : 0;
+    var trendBonus = trendBonusFor(dish, pot);
     var deduction = Math.min(0.55, mistakeCount * 0.15);
     var total = Math.max(1, Math.round((basePay + ingredientPay + trendBonus) * (1 - deduction)));
     var xpGain = Math.max(5, Math.round(8 + pot.length * 3 - mistakeCount));
 
     var oldLevel = state.level || 1;
     var oldGems = state.gems || 0;
+    var oldStars = state.stars || 0;
     state.coins += total;
     gainXP(xpGain);
+    state.customersServed = (state.customersServed || 0) + 1;
+    updateDishStatsAfterServe(dish, mistakeCount, trendBonus);
+    var heartEarned = maybeAwardHeart(dish, mistakeCount, trendBonus);
+    var newStars = updateRestaurantStars();
 
     var reward = {
       coins: total,
@@ -971,9 +1239,11 @@
       levels: Math.max(0, (state.level || 1) - oldLevel),
       trendBonus: trendBonus,
       missing: missing.length,
-      extras: unique(extras).length
+      extras: unique(extras).length,
+      hearts: heartEarned ? 1 : 0,
+      stars: Math.max(0, (state.stars || 0) - oldStars) + newStars
     };
-    var feedback = buildFeedback(dish, pot, missing, extras);
+    var feedback = buildFeedback(dish, pot, missing, extras, heartEarned, order.critic);
     state.currentOrder = null;
     state.pot = [];
     saveAndRender('Served! Check the customer bubble for feedback and rewards.');
@@ -981,10 +1251,110 @@
     switchTab('front');
   }
 
-  function isTrendingDish(pot) {
-    if (!state.currentTrendId) return false;
+  function trendBonusFor(dish, pot) {
+    var trend = state.currentTrend;
+    if (!trend) return 0;
+    var basePay = dish ? Number(dish.price) || 20 : 20;
+    if (trend.type === 'flavor' && isFlavorTrendingDish(pot, trend.id)) return Math.ceil(basePay * 0.35);
+    if (trend.type === 'dish' && dish && trend.id === dish.id) return Math.ceil(basePay * 0.25);
+    if (trend.type === 'bargain' && dish && priceVibe(dish.price, idealDishPrice(dish)) === 'cheap') return Math.ceil(basePay * 0.18);
+    if (trend.type === 'fancy' && dish && priceVibe(dish.price, idealDishPrice(dish)) === 'expensive') return Math.ceil(basePay * 0.22);
+    return 0;
+  }
+
+  function isFlavorTrendingDish(pot, flavorId) {
+    if (!flavorId) return false;
     var finalFlavors = finalFlavorProfile(pot);
-    return (finalFlavors[state.currentTrendId] || 0) >= 50;
+    return (finalFlavors[flavorId] || 0) >= 50;
+  }
+
+  function ensureDishStats(target) {
+    target = target || state;
+    if (!target.dishStats || typeof target.dishStats !== 'object') target.dishStats = {};
+    if (!Array.isArray(target.dishes)) return;
+    for (var i = 0; i < target.dishes.length; i++) {
+      var id = target.dishes[i].id;
+      if (!target.dishStats[id]) target.dishStats[id] = { served: 0, perfect: 0, hearts: 0 };
+      if (typeof target.dishStats[id].served !== 'number') target.dishStats[id].served = 0;
+      if (typeof target.dishStats[id].perfect !== 'number') target.dishStats[id].perfect = 0;
+      if (typeof target.dishStats[id].hearts !== 'number') target.dishStats[id].hearts = 0;
+    }
+  }
+
+  function dishStat(id) {
+    ensureDishStats(state);
+    if (!state.dishStats[id]) state.dishStats[id] = { served: 0, perfect: 0, hearts: 0 };
+    return state.dishStats[id];
+  }
+
+  function updateDishStatsAfterServe(dish, mistakeCount, trendBonus) {
+    if (!dish) return;
+    var stats = dishStat(dish.id);
+    stats.served += 1;
+    if (mistakeCount === 0) stats.perfect += 1;
+  }
+
+  function upgradeBonus(kind) {
+    var total = 0;
+    var owned = state.ownedUpgrades || [];
+    for (var i = 0; i < upgrades.length; i++) {
+      if (upgrades[i].kind === kind && owned.indexOf(upgrades[i].id) !== -1) total += upgrades[i].amount || 0;
+    }
+    return total;
+  }
+
+  function maybeAwardHeart(dish, mistakeCount, trendBonus) {
+    if (!dish || mistakeCount > 0) return false;
+    var stats = dishStat(dish.id);
+    var chance = 0.16;
+    if (trendBonus > 0) chance += 0.09;
+    if (state.currentOrder && state.currentOrder.critic) chance += 0.18;
+    chance += Math.min(0.22, upgradeBonus('heart') / 100);
+    chance = Math.min(0.72, chance);
+    if (Math.random() < chance) {
+      stats.hearts += 1;
+      state.totalHearts = (state.totalHearts || 0) + 1;
+      return true;
+    }
+    return false;
+  }
+
+  function updateRestaurantStars() {
+    var bonusStars = 0;
+    var expectedFromCustomers = Math.floor((state.customersServed || 0) / 10);
+    var expectedFromHearts = Math.floor((state.totalHearts || 0) / 5);
+    var target = expectedFromCustomers + expectedFromHearts;
+    if ((state.stars || 0) < target) {
+      bonusStars += target - (state.stars || 0);
+      state.stars = target;
+    }
+    var bonusChance = Math.min(0.35, upgradeBonus('star') / 100);
+    if (bonusChance > 0 && Math.random() < bonusChance) {
+      state.stars += 1;
+      bonusStars += 1;
+    }
+    return bonusStars;
+  }
+
+  function idealDishPrice(dish) {
+    if (!dish) return 5;
+    var count = (dish.base || []).length + Math.max(0, Math.floor((dish.optional || []).length * 0.5));
+    return Math.max(5, count * 5);
+  }
+
+  function priceVibe(price, ideal) {
+    price = Number(price) || 0;
+    ideal = Number(ideal) || 5;
+    if (price <= Math.max(1, ideal - 3)) return 'cheap';
+    if (price >= ideal + 6) return 'expensive';
+    return 'ideal';
+  }
+
+  function priceHintText(price, ideal) {
+    var vibe = priceVibe(price, ideal);
+    if (vibe === 'cheap') return 'Ideal price: ' + ideal + ' coins. This feels like a bargain.';
+    if (vibe === 'expensive') return 'Ideal price: ' + ideal + ' coins. This feels fancy/expensive.';
+    return 'Ideal price: ' + ideal + ' coins. Nice balanced price.';
   }
 
   function finalFlavorProfile(ingredientIds) {
@@ -1007,17 +1377,106 @@
     return totals;
   }
 
-  function buildFeedback(dish, pot, missing, extras) {
+  function buildFeedback(dish, pot, missing, extras, heartEarned, critic) {
     var finalFlavors = finalFlavorProfile(pot);
     var sorted = Object.keys(finalFlavors).sort(function (a, b) { return finalFlavors[b] - finalFlavors[a]; });
     var top = getFlavor(sorted[0]);
     var second = getFlavor(sorted[1]) || top;
     var low = findLowFlavor(finalFlavors) || top;
     var hasMistakes = missing.length || extras.length;
-    var template = randomItem(hasMistakes ? critiqueTemplates : positiveTemplates);
+    var stats = dish ? dishStat(dish.id) : { hearts: 0 };
+    var ideal = dish ? idealDishPrice(dish) : 0;
+    var vibe = dish ? priceVibe(dish.price, ideal) : 'ideal';
+    var trend = state.currentTrend;
+
+    var bargainFeedback = [
+      'Wow, this {DISH} was delicious and such a bargain.',
+      'I could finally get the {DISH} because I could afford it. It was spectacular.',
+      'The {DISH} tasted amazing, and the price made it even better.',
+      'I noticed this was cheaper than expected. What a tasty deal.',
+      'Budget-friendly and delicious? I am obsessed with this {DISH}.',
+      'That price made me happy before I even took a bite.',
+      'A bargain this good deserves a little applause, {M}.',
+      'Affordable and delicious is a powerful combo.',
+      'I came for the low price, but I would come back for the {F}.',
+      'That {DISH} felt like finding a secret deal on the menu.'
+    ];
+    var fancyFeedback = [
+      'This {DISH} felt fancy in the best way.',
+      'The {DISH} tasted premium. Totally worth it.',
+      'I wanted something special, and this {DISH} delivered.',
+      'That was a fancy little treat. I loved the {F}.',
+      'This tastes like the kind of {DISH} people talk about later.',
+      'That {DISH} made me feel like I was at a tiny luxury restaurant.',
+      'Worth the splurge. The {F} was gorgeous.',
+      '{M}, this felt like a signature plate.',
+      'Fancy, flavorful, and still very fun.',
+      'I paid extra, and honestly, I get it.'
+    ];
+    var trendFeedback = [
+      'Now I see why the {DISH} is trending.',
+      'The hype around this {DISH} makes sense. That was so good.',
+      'Everyone was right about your {DISH}. Loved it.',
+      'I came for the trend and stayed for the {F}.',
+      'Your trending {DISH} totally lived up to it.',
+      'The trend board did not lie about this one.',
+      'I understand why people are ordering this today.',
+      'That {DISH} deserves its little trending moment.',
+      'The {F} is exactly why this dish is getting attention.',
+      '{RESTAURANT} has a hit today, {M}.'
+    ];
+    var heartFeedback = [
+      'I loved this so much. I am adding a heart to the {DISH}.',
+      'This {DISH} is going on my favorites list.',
+      'That was one of the best things I have had here.',
+      'I am absolutely telling people about this {DISH}.',
+      'That was heart-worthy. Seriously, great job.',
+      'That {DISH} deserves a heart and maybe a tiny fan club.',
+      '{M}, you have to keep this one on the menu.',
+      'I am officially emotionally attached to this {DISH}.',
+      'That was the kind of meal people remember.',
+      'I was not expecting to love it this much.'
+    ];
+    var popularFeedback = [
+      'I heard your {DISH} was popular, and wow, people were right.',
+      'This {DISH} deserves all the hearts it has been getting.',
+      'I understand the reputation now. The {DISH} is amazing.',
+      'Your famous {DISH} is famous for a reason.',
+      'I came because everyone talks about this {DISH}, and I get it now.',
+      '{M}, this {DISH} is becoming a little legend.',
+      'The regulars were right to recommend this.',
+      'I can see why this is one of {RESTAURANT}\'s top dishes.',
+      'That {DISH} has main-character energy.',
+      'Please tell me this stays on the menu forever.'
+    ];
+    var criticFeedback = [
+      'As a local food critic, I have to say this {DISH} has serious charm.',
+      'My review is going to mention the {F}. That stood out beautifully.',
+      'This place has personality, and this {DISH} proves it.',
+      'I can see why people recommended {RESTAURANT}. Excellent work.',
+      'That {DISH} had a clear point of view. Very impressive.',
+      '{M}, your menu really does make its own rules.',
+      'There is a playful confidence here. I like it.',
+      'This {DISH} gives {RESTAURANT} a strong identity.',
+      'I came in curious and left with notes full of compliments.',
+      'That was creative without feeling random. Nicely done.'
+    ];
+
+    var template;
+    if (hasMistakes) template = randomItem(critiqueTemplates);
+    else if (critic) template = randomItem(criticFeedback);
+    else if (heartEarned) template = randomItem(heartFeedback);
+    else if (stats.hearts >= 15 && Math.random() < 0.35) template = randomItem(popularFeedback);
+    else if (trend && trend.type === 'dish' && dish && trend.id === dish.id && Math.random() < 0.45) template = randomItem(trendFeedback);
+    else if (vibe === 'cheap' && Math.random() < 0.35) template = randomItem(bargainFeedback);
+    else if (vibe === 'expensive' && Math.random() < 0.30) template = randomItem(fancyFeedback);
+    else template = randomItem(positiveTemplates);
+
     var ingredientId = missing[0] || extras[0] || pot[0] || randomOptionalIngredient(dish);
     var message = template
       .replace(/\{DISH\}/g, dishPlain(dish))
+      .replace(/\{M\}/g, state.chefName || 'Chef')
+      .replace(/\{RESTAURANT\}/g, state.restaurantName || 'Menu Menace')
       .replace(/\{F\}/g, top ? top.form : 'flavor')
       .replace(/\{F2\}/g, second ? second.form : 'flavor')
       .replace(/\{DE\}/g, top ? top.descriptor : 'tasty')
@@ -1057,6 +1516,7 @@
     renderIngredientManageList();
     renderDishIngredientChecks();
     renderDishManageList();
+    updateNewDishPriceHint();
   }
 
   function saveNames() {
@@ -1437,6 +1897,7 @@
       base.appendChild(makeCheckRow('base-ingredient-check', state.ingredients[i]));
       optional.appendChild(makeCheckRow('optional-ingredient-check', state.ingredients[i]));
     }
+    updateNewDishPriceHint();
   }
 
   function makeCheckRow(className, ingredient) {
@@ -1449,6 +1910,24 @@
     label.appendChild(input);
     label.appendChild(document.createTextNode(ingredientLabel(ingredient.id, false)));
     return label;
+  }
+
+  function updateNewDishPriceHint() {
+    var hint = $('new-dish-price-hint');
+    var priceEl = $('new-dish-price');
+    if (!hint || !priceEl) return;
+    var base = checkedValues('.base-ingredient-check');
+    if (!base.length) {
+      hint.textContent = 'Pick base ingredients to see an ideal price.';
+      hint.className = 'price-hint';
+      return;
+    }
+    var fake = { base: base, optional: checkedValues('.optional-ingredient-check') };
+    var ideal = idealDishPrice(fake);
+    var price = Math.max(1, Math.round(Number(priceEl.value) || ideal));
+    var vibe = priceVibe(price, ideal);
+    hint.textContent = priceHintText(price, ideal);
+    hint.className = 'price-hint ' + vibe;
   }
 
   function addDish() {
@@ -1523,11 +2002,25 @@
       { value: 'single', text: 'a/an dish, like a hamburger' },
       { value: 'collective', text: 'some dish, like some pizza or spaghetti' }
     ]);
-    addNumberField(form, 'edit-dish-price', 'Price in coins', dish.price || 20, 1, null);
+    var priceInput = addNumberField(form, 'edit-dish-price', 'Price in coins', dish.price || 20, 1, null);
+    var editPriceHint = document.createElement('p');
+    editPriceHint.className = 'price-hint';
+    editPriceHint.textContent = priceHintText(dish.price || 20, idealDishPrice(dish));
+    form.appendChild(editPriceHint);
     var baseSet = addModalFieldset(form, 'Base recipe');
     addIngredientCheckboxes(baseSet, 'edit-dish-base-check', dish.base || []);
     var optSet = addModalFieldset(form, 'Optional ingredients customers may request');
     addIngredientCheckboxes(optSet, 'edit-dish-optional-check', dish.optional || []);
+    function refreshEditPriceHint() {
+      var fakeDish = { base: checkedValuesInside(form, '.edit-dish-base-check'), optional: checkedValuesInside(form, '.edit-dish-optional-check') };
+      var ideal = idealDishPrice(fakeDish);
+      var price = Math.max(1, Math.round(Number($('edit-dish-price').value) || ideal));
+      editPriceHint.textContent = priceHintText(price, ideal);
+      editPriceHint.className = 'price-hint ' + priceVibe(price, ideal);
+    }
+    priceInput.addEventListener('input', refreshEditPriceHint, false);
+    form.addEventListener('change', refreshEditPriceHint, false);
+    refreshEditPriceHint();
     var note = document.createElement('p');
     note.className = 'muted small-text';
     note.textContent = 'Tip: “with no” orders only use ingredients in this dish. Weird add-on orders are rare and say they are weird.';
@@ -1585,6 +2078,7 @@
     var ok = window.confirm('Remove "' + dish.name + '" from the menu?');
     if (!ok) return;
     state.dishes = state.dishes.filter(function (item) { return item.id !== id; });
+    if (state.dishStats) delete state.dishStats[id];
     if (state.currentOrder && state.currentOrder.dishId === id) {
       state.currentOrder = null;
       state.pot = [];
@@ -1592,8 +2086,110 @@
     saveAndRender('Dish removed.');
   }
 
-  function renderCosmetics() {
+  function renderStatsTab() {
+    ensureDishStats(state);
+    var box = $('restaurant-stats');
+    if (box) {
+      var topDish = topDishes()[0];
+      box.innerHTML = '<div class="stats-grid-big">' +
+        '<div class="mini-stat"><strong>' + escapeHTML(String(state.customersServed || 0)) + '</strong><span>customers served</span></div>' +
+        '<div class="mini-stat"><strong>' + escapeHTML(String(state.stars || 0)) + '</strong><span>reputation stars</span></div>' +
+        '<div class="mini-stat"><strong>' + escapeHTML(String(state.totalHearts || 0)) + '</strong><span>dish hearts</span></div>' +
+        '<div class="mini-stat"><strong>' + escapeHTML(topDish ? dishLabel(topDish.dish) : 'none yet') + '</strong><span>top dish</span></div>' +
+        '</div>';
+    }
+    renderDishStatsList();
+  }
+
+  function topDishes() {
+    ensureDishStats(state);
+    var rows = [];
+    for (var i = 0; i < state.dishes.length; i++) {
+      var dish = state.dishes[i];
+      var stats = dishStat(dish.id);
+      rows.push({ dish: dish, stats: stats, score: (stats.hearts || 0) * 10 + (stats.perfect || 0) * 2 + (stats.served || 0) });
+    }
+    rows.sort(function (a, b) { return b.score - a.score; });
+    return rows;
+  }
+
+  function renderDishStatsList() {
+    var container = $('dish-stats-list');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!state.dishes.length) {
+      container.innerHTML = '<p class="muted">No dishes yet.</p>';
+      return;
+    }
+    var top = topDishes().slice(0, 5);
+    var topDetails = makeDetails('Top five dishes', 'accordion', true);
+    var topContent = document.createElement('div');
+    topContent.className = 'accordion-content';
+    for (var t = 0; t < top.length; t++) topContent.appendChild(makeDishStatCard(top[t].dish));
+    topDetails.appendChild(topContent);
+    container.appendChild(topDetails);
+
+    var grouped = groupBy(state.dishes, function (dish) { return dish.category || 'Menu'; });
+    var cats = Object.keys(grouped).sort();
+    for (var c = 0; c < cats.length; c++) {
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', false);
+      var content = document.createElement('div');
+      content.className = 'accordion-content';
+      for (var d = 0; d < grouped[cats[c]].length; d++) content.appendChild(makeDishStatCard(grouped[cats[c]][d]));
+      details.appendChild(content);
+      container.appendChild(details);
+    }
+  }
+
+  function makeDishStatCard(dish) {
+    var stats = dishStat(dish.id);
+    var div = document.createElement('div');
+    div.className = 'manage-item';
+    var ideal = idealDishPrice(dish);
+    div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(dishLabel(dish)) + '</strong><br>' +
+      '<span class="muted">' + escapeHTML(String(stats.hearts || 0)) + ' hearts • ' + escapeHTML(String(stats.served || 0)) + ' served • ' + escapeHTML(String(stats.perfect || 0)) + ' perfect</span><br>' +
+      '<span class="price-pill ' + priceVibe(dish.price, ideal) + '">' + escapeHTML(priceHintText(dish.price, ideal)) + '</span></div>';
+    return div;
+  }
+
+  function renderShop() {
+    renderUpgrades();
     renderThemes();
+  }
+
+  function renderUpgrades() {
+    var container = $('upgrade-list');
+    if (!container) return;
+    container.innerHTML = '';
+    for (var i = 0; i < upgrades.length; i++) {
+      var upgrade = upgrades[i];
+      var owned = (state.ownedUpgrades || []).indexOf(upgrade.id) !== -1;
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'theme-button';
+      button.setAttribute('data-id', upgrade.id);
+      button.innerHTML = '<strong>' + escapeHTML(upgrade.name) + '</strong><br><span>' + escapeHTML(upgrade.description) + '</span><br><span>' + (owned ? 'Owned' : escapeHTML(String(upgrade.cost)) + ' ' + escapeHTML(upgrade.costType)) + '</span>';
+      button.disabled = owned;
+      button.addEventListener('click', function () { buyUpgrade(this.getAttribute('data-id')); }, false);
+      container.appendChild(button);
+    }
+  }
+
+  function buyUpgrade(id) {
+    var upgrade = null;
+    for (var i = 0; i < upgrades.length; i++) if (upgrades[i].id === id) upgrade = upgrades[i];
+    if (!upgrade) return;
+    if (!Array.isArray(state.ownedUpgrades)) state.ownedUpgrades = [];
+    if (state.ownedUpgrades.indexOf(id) !== -1) return;
+    if (upgrade.costType === 'gems') {
+      if ((state.gems || 0) < upgrade.cost) { showStatus('Not enough gems for that upgrade yet.'); return; }
+      state.gems -= upgrade.cost;
+    } else {
+      if ((state.coins || 0) < upgrade.cost) { showStatus('Not enough coins for that upgrade yet.'); return; }
+      state.coins -= upgrade.cost;
+    }
+    state.ownedUpgrades.push(id);
+    saveAndRender(upgrade.name + ' purchased!');
   }
 
   function renderSettings() {

@@ -26,6 +26,8 @@
       <div class="stat"><span>Level</span><strong id="level-stat">1</strong></div>
       <div class="stat"><span>XP</span><strong id="xp-stat">0 / 30</strong></div>
       <div class="stat"><span>Slots</span><strong id="slot-stat">0 / 5</strong></div>
+      <div class="stat"><span>Stars</span><strong id="stars-stat">0</strong></div>
+      <div class="stat"><span>Hearts</span><strong id="hearts-stat">0</strong></div>
     </section>
   </header>
 
@@ -33,7 +35,8 @@
     <button type="button" class="tab-button" data-tab="front" aria-selected="true">Counter</button>
     <button type="button" class="tab-button" data-tab="kitchen" aria-selected="false">Kitchen</button>
     <button type="button" class="tab-button" data-tab="customize" aria-selected="false">Build</button>
-    <button type="button" class="tab-button" data-tab="cosmetics" aria-selected="false">Cosmetics</button>
+    <button type="button" class="tab-button" data-tab="stats" aria-selected="false">Stats</button>
+    <button type="button" class="tab-button" data-tab="shop" aria-selected="false">Shop</button>
     <button type="button" class="tab-button" data-tab="settings" aria-selected="false">Settings</button>
   </nav>
 
@@ -187,6 +190,7 @@
             </label>
             <label>Price in coins
               <input id="new-dish-price" type="number" min="1" value="25">
+              <span id="new-dish-price-hint" class="price-hint">Pick ingredients to see an ideal price.</span>
             </label>
           </div>
           <fieldset>
@@ -203,17 +207,30 @@
       </article>
     </section>
 
-    <section id="cosmetics" class="tab-panel" hidden>
+    <section id="stats" class="tab-panel" hidden>
       <article class="card">
-        <h2>Cosmetics</h2>
-        <p class="muted">Spend gems on restaurant looks. These only change the vibe, not the difficulty.</p>
-        <div id="theme-list" class="theme-list"></div>
+        <h2>Restaurant stats</h2>
+        <p class="muted">Hearts are little customer-love moments. Stars are your restaurant reputation.</p>
+        <div id="restaurant-stats"></div>
+      </article>
+      <article class="card">
+        <h2>Dish stats</h2>
+        <p class="muted">Dishes are grouped by category. Your top five dishes are shown first.</p>
+        <div id="dish-stats-list" class="accordion-list"></div>
+      </article>
+    </section>
+
+    <section id="shop" class="tab-panel" hidden>
+      <article class="card">
+        <h2>Upgrades shop</h2>
+        <p class="muted">Spend coins and gems on reputation boosts, heart boosts, menu slots, and restaurant cosmetics.</p>
+        <div id="upgrade-list" class="theme-list"></div>
       </article>
 
       <article class="card">
-        <h2>How to get gems</h2>
-        <p>Level up by serving customers. Every level gives gems equal to your new level, so level 2 gives 2 gems, level 20 gives 20 gems, and so on.</p>
-        <p class="muted">Rerolling trends can also spend gems, so save some if you want new themes.</p>
+        <h2>Cosmetics</h2>
+        <p class="muted">Themes cost gems. They change the vibe, not the rules.</p>
+        <div id="theme-list" class="theme-list"></div>
       </article>
     </section>
 
