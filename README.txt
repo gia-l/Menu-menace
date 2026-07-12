@@ -136,3 +136,20 @@ Version 10 notes
 - Trends can occasionally have a second mini-trend, like a dish plus a pricing vibe.
 - Trend descriptions are more flavorful and still explain what the trend does.
 - Customer dialogue avoids saying "Chef Gia" or "Chef Chef". It uses the chef name more naturally.
+
+Version 11 notes: ingredient picking and substitutions
+------------------------------------------------------
+When you build or edit a dish, the ingredient checkboxes are grouped by ingredient category. This helps once your restaurant gets bigger. For example, you might keep rice, pasta, tortillas, bread, or steak in a Staples category, sauces in Sauces, herbs and salt in Seasonings, or go wild with Magical Ingredients, Elemental Ingredients, Potion Bases, Dragon Snacks, Space Foods, or anything else that fits your restaurant rules.
+
+Dishes now have three ingredient sections:
+
+1. Base recipe
+   These are the normal ingredients for the dish. The Use Recipe Base button in the Kitchen only adds these ingredients, so special requests still need to be handled by the player.
+
+2. Optional ingredients
+   These are add-ons customers may ask for, like pickles on a burger or whipped cream on coffee.
+
+3. Substitutions
+   These are swaps customers may request. For example: corn tortilla -> flour tortilla, beef patty -> veggie patty, regular bread -> gluten-free bread, or coffee -> decaf coffee. Substitutions are optional. Customers will not ask for every substitution every time, but when they do, the recipe helper will show the swap.
+
+Example: If an Americano's base recipe is espresso + water and a customer asks for milk, Use Recipe Base will still only add espresso + water. You add the milk manually. If the customer asks for extra espresso, Use Recipe Base still only adds espresso + water, and you tap espresso again.

@@ -201,6 +201,20 @@
             <div id="dish-optional-ingredients" class="check-list"></div>
           </fieldset>
           <fieldset>
+            <legend>Substitutions customers may request</legend>
+            <p class="muted small-text">Optional: add swaps like corn tortilla → flour tortilla, regular bread → gluten-free bread, or beef patty → veggie patty.</p>
+            <div class="substitution-builder">
+              <label>Instead of
+                <select id="new-sub-from"></select>
+              </label>
+              <label>Use
+                <select id="new-sub-to"></select>
+              </label>
+              <button type="button" id="add-substitution" class="secondary compact">Add substitution</button>
+            </div>
+            <div id="new-substitution-list" class="substitution-list"><p class="muted small-text">No substitutions yet.</p></div>
+          </fieldset>
+          <fieldset>
             <legend>Dish flavor profile</legend>
             <p class="muted small-text">Tap Analyze after choosing ingredients. Menu Menace averages the ingredient flavors, then you can tweak the final dish profile before saving.</p>
             <button type="button" id="analyze-new-dish" class="secondary">Analyze flavor profile</button>

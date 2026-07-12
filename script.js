@@ -1,12 +1,13 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v9-dish-flavor-editor';
-  var PREVIOUS_SAVE_KEYS = ['menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
-  var VERSION = 8;
+  var SAVE_KEY = 'menu-menace-v11-substitutions';
+  var PREVIOUS_SAVE_KEYS = ['menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
+  var VERSION = 11;
   var modalSaveHandler = null;
   var state = null;
   var saveAvailable = true;
+  var newDishSubstitutions = [];
 
   var orderTemplates = [
     'Hello, {M}! Can I get {DI} please? Thanks!',
@@ -128,7 +129,7 @@
       { id: 'herbs', name: 'herbs', collective: 'herbs', category: 'Seasonings', icon: '🌿', flavors: { fresh: 100 } }
     ];
     base.dishes = [
-      { id: 'spaghetti', name: 'spaghetti', category: 'Classics', kind: 'collective', price: 20, icon: '🍝', base: ['pasta', 'tomato-sauce', 'herbs'], optional: [], flavors: { savory: 48, sweet: 10, fresh: 42 } }
+      { id: 'spaghetti', name: 'spaghetti', category: 'Classics', kind: 'collective', price: 20, icon: '🍝', base: ['pasta', 'tomato-sauce', 'herbs'], optional: [], substitutions: [], flavors: { savory: 48, sweet: 10, fresh: 42 } }
     ];
     base.currentTrendId = 'savory';
     return base;
@@ -176,6 +177,30 @@
       if (result.indexOf(list[i]) === -1) result.push(list[i]);
     }
     return result;
+  }
+
+  function cleanSubstitutions(list, allowedIds) {
+    var clean = [];
+    var seen = {};
+    list = Array.isArray(list) ? list : [];
+    for (var i = 0; i < list.length; i++) {
+      var sub = list[i] || {};
+      var from = sub.from;
+      var to = sub.to;
+      if (!from || !to || from === to) continue;
+      if (allowedIds && (allowedIds.indexOf(from) === -1 || allowedIds.indexOf(to) === -1)) continue;
+      var key = from + '>' + to;
+      if (!seen[key]) {
+        clean.push({ from: from, to: to });
+        seen[key] = true;
+      }
+    }
+    return clean;
+  }
+
+  function substitutionText(sub) {
+    if (!sub) return '';
+    return ingredientName(sub.to, true) + ' instead of ' + ingredientName(sub.from, true);
   }
 
   function uniqueId(base, existing) {
@@ -298,6 +323,7 @@
       if (typeof base.dishes[d].icon !== 'string') base.dishes[d].icon = '';
       if (!Array.isArray(base.dishes[d].base)) base.dishes[d].base = [];
       if (!Array.isArray(base.dishes[d].optional)) base.dishes[d].optional = [];
+      if (!Array.isArray(base.dishes[d].substitutions)) base.dishes[d].substitutions = [];
       if (!base.dishes[d].price) base.dishes[d].price = 20;
     }
 
@@ -353,6 +379,7 @@
     on('add-ingredient', 'click', addIngredient);
     on('add-dish', 'click', addDish);
     on('analyze-new-dish', 'click', analyzeNewDishFlavorProfile);
+    on('add-substitution', 'click', addNewSubstitution);
     on('export-save', 'click', exportSave);
     on('copy-save-text', 'click', copySaveText);
     on('import-save-text', 'click', importSaveText);
@@ -376,6 +403,9 @@
       if (event.target && (event.target.className || '').indexOf('base-ingredient-check') !== -1) {
         updateNewDishPriceHint();
         markNewDishProfileStale();
+      }
+      if (event.target && (event.target.className || '').indexOf('optional-ingredient-check') !== -1) {
+        updateNewDishPriceHint();
       }
       if (event.target && (event.target.className || '').indexOf('new-dish-flavor-input') !== -1) updateNewDishFlavorSummary();
     }, false);
@@ -430,6 +460,7 @@
     for (var i = 0; i < state.dishes.length; i++) {
       state.dishes[i].base = unique((state.dishes[i].base || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; }));
       state.dishes[i].optional = unique((state.dishes[i].optional || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1 && state.dishes[i].base.indexOf(id) === -1; }));
+      state.dishes[i].substitutions = cleanSubstitutions(state.dishes[i].substitutions || [], ingredientIds);
     }
 
     state.pot = (state.pot || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
@@ -457,6 +488,9 @@
       state.currentOrder.required = (state.currentOrder.required || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
       state.currentOrder.excluded = (state.currentOrder.excluded || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
       state.currentOrder.extra = (state.currentOrder.extra || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; });
+      if (state.currentOrder.substitution) {
+        if (ingredientIds.indexOf(state.currentOrder.substitution.from) === -1 || ingredientIds.indexOf(state.currentOrder.substitution.to) === -1) state.currentOrder.substitution = null;
+      }
     }
 
     if (state.currentTrendId && !getFlavor(state.currentTrendId)) {
@@ -733,13 +767,19 @@
     var required = [];
     var excluded = [];
     var extra = [];
+    var substitution = null;
     var weirdAdd = false;
     var critic = isCriticVisit(dish);
 
     if (optional.length > 0 && Math.random() < 0.55) required.push(randomItem(optional));
 
+    var possibleSubs = cleanSubstitutions(dish.substitutions || [], state.ingredients.map(function (x) { return x.id; })).filter(function (sub) {
+      return recipeIngredients.indexOf(sub.from) !== -1 && sub.to !== sub.from;
+    });
+    if (possibleSubs.length > 0 && Math.random() < 0.26) substitution = randomItem(possibleSubs);
+
     if (recipeIngredients.length > 0 && Math.random() < 0.28) {
-      var avoidPool = recipeIngredients.filter(function (id) { return required.indexOf(id) === -1; });
+      var avoidPool = recipeIngredients.filter(function (id) { return required.indexOf(id) === -1 && (!substitution || id !== substitution.from); });
       if (avoidPool.length) excluded.push(randomItem(avoidPool));
     }
 
@@ -754,12 +794,20 @@
       weirdAdd = true;
     }
 
+    if (substitution) {
+      required = [];
+      excluded = [];
+      extra = [];
+      weirdAdd = false;
+    }
+
     var order = {
       id: 'order-' + Date.now(),
       dishId: dish.id,
       required: unique(required),
       excluded: unique(excluded),
       extra: extra,
+      substitution: substitution,
       weirdAdd: weirdAdd,
       critic: critic,
       text: ''
@@ -817,6 +865,8 @@
     var required = order.required || [];
     var excluded = order.excluded || [];
     var extra = order.extra || [];
+    var substitution = order.substitution || null;
+    var substitutionOrderText = substitutionText(substitution);
     var withText = listIngredientNames(required, true);
     var withoutText = listIngredientNames(excluded, true);
     var extraText = listIngredientNames(extra, true);
@@ -861,6 +911,16 @@
       'Can you make {DISH} without {WITHOUT}? That would be amazing.',
       'No {WITHOUT} on the {DISH}, please. Everything else is fine.',
       'Chef {M}, I\'ll have {DISH}, just hold the {WITHOUT}.'
+    ];
+    var substitutionTemplates = [
+      'Could I get {DISH} with {SUBSTITUTION}?',
+      'Hi {M}, can you make {DISH} with {SUBSTITUTION}?',
+      'I want {DISH}, but swap in {SUBSTITUTION}, please.',
+      'Could you do {DISH} with {SUBSTITUTION}? I want to try that version.',
+      'For my {DISH}, can you substitute {SUBSTITUTION}?',
+      'I like the sound of {DISH}, but today I want {SUBSTITUTION}.',
+      '{M}, can I get {DISH} with a substitution: {SUBSTITUTION}?',
+      'One {DISH}, please, but make it {SUBSTITUTION}.'
     ];
     var extraTemplates = [
       'Could I get {DISH} with extra {EXTRA}?',
@@ -943,6 +1003,7 @@
     var template;
     if (order.critic) template = randomItem(criticTemplates);
     else if (order.weirdAdd && required.length) template = randomItem(weirdTemplates);
+    else if (substitution) template = randomItem(substitutionTemplates);
     else if (extra.length && !required.length && !excluded.length) template = randomItem(extraTemplates);
     else if (required.length && excluded.length) template = randomItem(bothTemplates);
     else if (required.length) template = randomItem(withTemplates);
@@ -961,6 +1022,7 @@
       .replace(/\{WITH\}/g, withText)
       .replace(/\{WITHOUT\}/g, withoutText)
       .replace(/\{EXTRA\}/g, extraText)
+      .replace(/\{SUBSTITUTION\}/g, substitutionOrderText)
       .replace(/\{BODY_PART\}/g, randomItem(bodyParts));
   }
 
@@ -1057,6 +1119,7 @@
     body.className = 'dish-body';
     var baseNames = (dish.base || []).map(function (id) { return ingredientName(id, true); }).join(', ');
     var optionalNames = (dish.optional || []).map(function (id) { return ingredientName(id, true); }).join(', ');
+    var substitutionNames = (dish.substitutions || []).map(function (sub) { return substitutionText(sub); }).join(', ');
     var stats = dishStat(dish.id);
     var ideal = idealDishPrice(dish);
     body.innerHTML = '<p><strong>Wording:</strong> ' + escapeHTML(dishPhrase(dish)) + '</p>' +
@@ -1064,7 +1127,8 @@
       '<p><strong>Hearts:</strong> ' + escapeHTML(String(stats.hearts || 0)) + ' • <strong>Served:</strong> ' + escapeHTML(String(stats.served || 0)) + '</p>' +
       '<p><strong>Flavor profile:</strong> ' + escapeHTML(flavorSummary(dishFlavorProfile(dish))) + '</p>' +
       '<p><strong>Base recipe:</strong> ' + escapeHTML(baseNames || 'nothing yet') + '</p>' +
-      '<p><strong>Optional:</strong> ' + escapeHTML(optionalNames || 'none') + '</p>';
+      '<p><strong>Optional:</strong> ' + escapeHTML(optionalNames || 'none') + '</p>' +
+      '<p><strong>Substitutions:</strong> ' + escapeHTML(substitutionNames || 'none') + '</p>';
     if (includeRemove) {
       var actions = document.createElement('div');
       actions.className = 'manage-actions';
@@ -1128,12 +1192,14 @@
     var dish = getDish(state.currentOrder.dishId);
     var expected = expectedIngredients(state.currentOrder);
     var excluded = state.currentOrder.excluded || [];
+    var substitution = state.currentOrder.substitution || null;
     text.textContent = state.currentOrder.text;
 
     var html = '<h3>Recipe helper</h3><ul>';
     html += '<li>Main dish: ' + escapeHTML(dishPhrase(dish)) + '</li>';
     html += '<li>Needed: ' + escapeHTML(expected.length ? expected.map(function (id) { return ingredientName(id, true); }).join(', ') : 'nothing yet') + '</li>';
     html += '<li>Avoid: ' + escapeHTML(excluded.length ? excluded.map(function (id) { return ingredientName(id, true); }).join(', ') : 'nothing special') + '</li>';
+    html += '<li>Substitution: ' + escapeHTML(substitution ? substitutionText(substitution) : 'none') + '</li>';
     html += '</ul>';
     helper.innerHTML = html;
   }
@@ -1303,9 +1369,14 @@
     var base = dish && Array.isArray(dish.base) ? dish.base.slice() : [];
     var required = order && Array.isArray(order.required) ? order.required.slice() : [];
     var extra = order && Array.isArray(order.extra) ? order.extra.slice() : [];
-    var excluded = order && Array.isArray(order.excluded) ? order.excluded : [];
+    var excluded = order && Array.isArray(order.excluded) ? order.excluded.slice() : [];
+    var substitution = order ? order.substitution : null;
     var result = [];
-    for (var i = 0; i < base.length; i++) if (excluded.indexOf(base[i]) === -1) result.push(base[i]);
+    for (var i = 0; i < base.length; i++) {
+      if (substitution && base[i] === substitution.from) continue;
+      if (excluded.indexOf(base[i]) === -1) result.push(base[i]);
+    }
+    if (substitution && excluded.indexOf(substitution.to) === -1) result.push(substitution.to);
     for (var r = 0; r < required.length; r++) if (excluded.indexOf(required[r]) === -1 && result.indexOf(required[r]) === -1) result.push(required[r]);
     for (var e = 0; e < extra.length; e++) if (excluded.indexOf(extra[e]) === -1) result.push(extra[e]);
     return result;
@@ -1745,20 +1816,7 @@
   function addIngredientCheckboxes(fieldset, className, selected) {
     var list = document.createElement('div');
     list.className = 'check-list';
-    selected = selected || [];
-    for (var i = 0; i < state.ingredients.length; i++) {
-      var ing = state.ingredients[i];
-      var label = document.createElement('label');
-      label.className = 'check-row';
-      var input = document.createElement('input');
-      input.type = 'checkbox';
-      input.className = className;
-      input.value = ing.id;
-      input.checked = selected.indexOf(ing.id) !== -1;
-      label.appendChild(input);
-      label.appendChild(document.createTextNode(ingredientLabel(ing.id, false)));
-      list.appendChild(label);
-    }
+    appendGroupedIngredientChecks(list, className, selected || []);
     fieldset.appendChild(list);
   }
 
@@ -2029,25 +2087,165 @@
     if (!state.ingredients.length) {
       base.innerHTML = '<p class="muted">Create ingredients first.</p>';
       optional.innerHTML = '<p class="muted">Create ingredients first.</p>';
+      renderNewDishSubstitutionControls();
       return;
     }
-    for (var i = 0; i < state.ingredients.length; i++) {
-      base.appendChild(makeCheckRow('base-ingredient-check', state.ingredients[i]));
-      optional.appendChild(makeCheckRow('optional-ingredient-check', state.ingredients[i]));
-    }
+    appendGroupedIngredientChecks(base, 'base-ingredient-check', []);
+    appendGroupedIngredientChecks(optional, 'optional-ingredient-check', []);
+    renderNewDishSubstitutionControls();
     updateNewDishPriceHint();
   }
 
-  function makeCheckRow(className, ingredient) {
+  function appendGroupedIngredientChecks(container, className, selected) {
+    selected = selected || [];
+    var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
+    var cats = Object.keys(grouped).sort();
+    for (var c = 0; c < cats.length; c++) {
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion mini-accordion', c === 0);
+      var content = document.createElement('div');
+      content.className = 'accordion-content check-list grouped-check-list';
+      for (var i = 0; i < grouped[cats[c]].length; i++) content.appendChild(makeCheckRow(className, grouped[cats[c]][i], selected));
+      details.appendChild(content);
+      container.appendChild(details);
+    }
+  }
+
+  function makeCheckRow(className, ingredient, selected) {
     var label = document.createElement('label');
     label.className = 'check-row';
     var input = document.createElement('input');
     input.type = 'checkbox';
     input.className = className;
     input.value = ingredient.id;
+    input.checked = selected && selected.indexOf(ingredient.id) !== -1;
     label.appendChild(input);
     label.appendChild(document.createTextNode(ingredientLabel(ingredient.id, false)));
     return label;
+  }
+
+  function ingredientOptions(select, selectedId) {
+    if (!select) return;
+    select.innerHTML = '';
+    var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
+    var cats = Object.keys(grouped).sort();
+    for (var c = 0; c < cats.length; c++) {
+      var group = document.createElement('optgroup');
+      group.label = cats[c];
+      for (var i = 0; i < grouped[cats[c]].length; i++) {
+        var ing = grouped[cats[c]][i];
+        var opt = document.createElement('option');
+        opt.value = ing.id;
+        opt.textContent = ingredientLabel(ing.id, false);
+        if (ing.id === selectedId) opt.selected = true;
+        group.appendChild(opt);
+      }
+      select.appendChild(group);
+    }
+  }
+
+  function renderNewDishSubstitutionControls() {
+    ingredientOptions($('new-sub-from'), null);
+    ingredientOptions($('new-sub-to'), null);
+    renderNewSubstitutionList();
+  }
+
+  function addNewSubstitution() {
+    var from = $('new-sub-from') ? $('new-sub-from').value : '';
+    var to = $('new-sub-to') ? $('new-sub-to').value : '';
+    if (!from || !to) { showStatus('Pick both sides of the substitution.'); return; }
+    if (from === to) { showStatus('A substitution needs two different ingredients.'); return; }
+    newDishSubstitutions = cleanSubstitutions(newDishSubstitutions.concat([{ from: from, to: to }]), state.ingredients.map(function (x) { return x.id; }));
+    renderNewSubstitutionList();
+    showStatus('Substitution added.');
+  }
+
+  function renderNewSubstitutionList() {
+    var box = $('new-substitution-list');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!newDishSubstitutions.length) {
+      box.innerHTML = '<p class="muted small-text">No substitutions yet.</p>';
+      return;
+    }
+    for (var i = 0; i < newDishSubstitutions.length; i++) {
+      (function (index) {
+        var row = document.createElement('div');
+        row.className = 'substitution-row';
+        var text = document.createElement('span');
+        text.textContent = substitutionText(newDishSubstitutions[index]);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'danger compact';
+        btn.textContent = 'Remove';
+        btn.addEventListener('click', function () {
+          newDishSubstitutions.splice(index, 1);
+          renderNewSubstitutionList();
+        }, false);
+        row.appendChild(text);
+        row.appendChild(btn);
+        box.appendChild(row);
+      })(i);
+    }
+  }
+
+  function addSubstitutionEditor(parent, initialSubs) {
+    var holder = document.createElement('div');
+    holder.className = 'substitution-editor';
+    var controls = document.createElement('div');
+    controls.className = 'substitution-builder';
+    var fromLabel = document.createElement('label');
+    fromLabel.textContent = 'Instead of';
+    var fromSelect = document.createElement('select');
+    fromLabel.appendChild(fromSelect);
+    var toLabel = document.createElement('label');
+    toLabel.textContent = 'Use';
+    var toSelect = document.createElement('select');
+    toLabel.appendChild(toSelect);
+    ingredientOptions(fromSelect, null);
+    ingredientOptions(toSelect, null);
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'secondary compact';
+    addBtn.textContent = 'Add substitution';
+    controls.appendChild(fromLabel);
+    controls.appendChild(toLabel);
+    controls.appendChild(addBtn);
+    var list = document.createElement('div');
+    list.className = 'substitution-list';
+    holder.appendChild(controls);
+    holder.appendChild(list);
+    parent.appendChild(holder);
+    var subs = cleanSubstitutions(initialSubs || [], state.ingredients.map(function (x) { return x.id; }));
+    function draw() {
+      list.innerHTML = '';
+      if (!subs.length) {
+        list.innerHTML = '<p class="muted small-text">No substitutions yet.</p>';
+        return;
+      }
+      for (var i = 0; i < subs.length; i++) {
+        (function (index) {
+          var row = document.createElement('div');
+          row.className = 'substitution-row';
+          var text = document.createElement('span');
+          text.textContent = substitutionText(subs[index]);
+          var remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'danger compact';
+          remove.textContent = 'Remove';
+          remove.addEventListener('click', function () { subs.splice(index, 1); draw(); }, false);
+          row.appendChild(text);
+          row.appendChild(remove);
+          list.appendChild(row);
+        })(i);
+      }
+    }
+    addBtn.addEventListener('click', function () {
+      if (!fromSelect.value || !toSelect.value || fromSelect.value === toSelect.value) return;
+      subs = cleanSubstitutions(subs.concat([{ from: fromSelect.value, to: toSelect.value }]), state.ingredients.map(function (x) { return x.id; }));
+      draw();
+    }, false);
+    draw();
+    return { get: function () { return cleanSubstitutions(subs, state.ingredients.map(function (x) { return x.id; })); } };
   }
 
   function updateNewDishPriceHint() {
@@ -2128,14 +2326,17 @@
       return;
     }
     optional = optional.filter(function (id) { return base.indexOf(id) === -1; });
+    var substitutions = cleanSubstitutions(newDishSubstitutions, state.ingredients.map(function (x) { return x.id; }));
     var id = uniqueId(slugify(name), state.dishes.map(function (x) { return x.id; }));
     var profileContainer = $('new-dish-flavor-profile');
     var flavors = profileContainer && profileContainer.querySelector('.new-dish-flavor-input') ? profileFromInputs(profileContainer, '.new-dish-flavor-input') : finalFlavorProfile(base);
-    state.dishes.push({ id: id, name: name, category: category, kind: kind, price: price, icon: icon, base: base, optional: optional, flavors: flavors });
+    state.dishes.push({ id: id, name: name, category: category, kind: kind, price: price, icon: icon, base: base, optional: optional, substitutions: substitutions, flavors: flavors });
     $('new-dish-name').value = '';
     $('new-dish-icon').value = '';
     $('new-dish-category').value = '';
     $('new-dish-price').value = '25';
+    newDishSubstitutions = [];
+    renderNewSubstitutionList();
     if ($('new-dish-flavor-profile')) $('new-dish-flavor-profile').innerHTML = '<p class="muted small-text">Pick recipe ingredients, then tap Analyze flavor profile.</p>';
     saveAndRender('Dish added to the menu.');
   }
@@ -2186,6 +2387,12 @@
     addIngredientCheckboxes(baseSet, 'edit-dish-base-check', dish.base || []);
     var optSet = addModalFieldset(form, 'Optional ingredients customers may request');
     addIngredientCheckboxes(optSet, 'edit-dish-optional-check', dish.optional || []);
+    var subSet = addModalFieldset(form, 'Substitutions customers may request');
+    var subNote = document.createElement('p');
+    subNote.className = 'muted small-text';
+    subNote.textContent = 'Optional swaps, like corn tortilla instead of flour tortilla. Customers may request these, but they are never required for the basic recipe.';
+    subSet.appendChild(subNote);
+    var substitutionEditor = addSubstitutionEditor(subSet, dish.substitutions || []);
     var flavorSet = addModalFieldset(form, 'Dish flavor profile');
     var flavorBox = document.createElement('div');
     flavorBox.id = 'edit-dish-flavor-profile';
@@ -2226,6 +2433,7 @@
       var price = Math.max(1, Math.round(Number(priceInput.value) || dish.price || 20));
       var base = checkedValuesInside(form, '.edit-dish-base-check');
       var optional = checkedValuesInside(form, '.edit-dish-optional-check').filter(function (ingId) { return base.indexOf(ingId) === -1; });
+      var substitutions = substitutionEditor.get();
       if (!name) {
         showStatus('Dish needs a name.');
         return;
@@ -2241,6 +2449,7 @@
       dish.price = price;
       dish.base = base;
       dish.optional = optional;
+      dish.substitutions = substitutions;
       dish.flavors = flavorBox && flavorBox.querySelector('.edit-dish-flavor-input') ? profileFromInputs(flavorBox, '.edit-dish-flavor-input') : finalFlavorProfile(base);
       closeEditor();
       saveAndRender('Dish updated.');
