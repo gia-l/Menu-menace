@@ -153,3 +153,5 @@ Dishes now have three ingredient sections:
    These are swaps customers may request. For example: corn tortilla -> flour tortilla, beef patty -> veggie patty, regular bread -> gluten-free bread, or coffee -> decaf coffee. Substitutions are optional. Customers will not ask for every substitution every time, but when they do, the recipe helper will show the swap.
 
 Example: If an Americano's base recipe is espresso + water and a customer asks for milk, Use Recipe Base will still only add espresso + water. You add the milk manually. If the customer asks for extra espresso, Use Recipe Base still only adds espresso + water, and you tap espresso again.
+
+Version 12 note: menu slots now live in the Shop. If you run out of slots while building a dish, the game shows a small warning right under the Finish adding dish button. You can buy the next slot right there and keep editing the same dish draft instead of losing your work.

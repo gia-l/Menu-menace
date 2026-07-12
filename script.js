@@ -375,6 +375,7 @@
     on('serve-food', 'click', serveFood);
     on('save-names', 'click', saveNames);
     on('buy-slot', 'click', buySlot);
+    on('inline-buy-slot', 'click', buySlot);
     on('add-flavor', 'click', addFlavor);
     on('add-ingredient', 'click', addIngredient);
     on('add-dish', 'click', addDish);
@@ -1726,6 +1727,7 @@
     renderDishIngredientChecks();
     renderDishManageList();
     updateNewDishPriceHint();
+    renderDishSlotWarning(false);
   }
 
   function saveNames() {
@@ -2317,6 +2319,7 @@
     }
     if (state.dishes.length >= state.menuSlots) {
       showStatus('You need another menu slot before adding this dish.');
+      renderDishSlotWarning(true);
       return;
     }
     var base = checkedValues('.base-ingredient-check');
@@ -2556,6 +2559,7 @@
   }
 
   function renderShop() {
+    renderSlots();
     renderUpgrades();
     renderThemes();
   }
@@ -2608,15 +2612,41 @@
     return 30 + (state.menuSlots - 5) * 18;
   }
 
+  function renderDishSlotWarning(forceShow) {
+    var box = $('dish-slot-warning');
+    if (!box) return;
+    var full = state.dishes.length >= state.menuSlots;
+    if (!forceShow && !full) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    var cost = slotCost();
+    box.hidden = false;
+    box.innerHTML = '<p><strong>Oops, you ran out of menu slots.</strong> Would you like to go to the shop and buy another one?</p>' +
+      '<div class="button-row"><button type="button" id="inline-buy-slot" class="primary">Buy a slot for ' + escapeHTML(String(cost)) + ' coins</button>' +
+      '<button type="button" class="secondary" data-jump-shop="true">Go to shop</button></div>';
+    var jump = box.querySelector('[data-jump-shop="true"]');
+    if (jump) jump.addEventListener('click', function () { switchTab('shop'); }, false);
+    var buy = $('inline-buy-slot');
+    if (buy) buy.addEventListener('click', buySlot, false);
+  }
+
   function buySlot() {
     var cost = slotCost();
     if (state.coins < cost) {
       showStatus('Not enough coins yet.');
+      renderDishSlotWarning(true);
       return;
     }
     state.coins -= cost;
     state.menuSlots += 1;
-    saveAndRender('Bought a new menu slot!');
+    saveGame();
+    renderStatsAndHeader();
+    renderSlots();
+    renderShop();
+    renderDishSlotWarning(false);
+    showStatus('Bought a new menu slot! You can keep working on your dish.');
   }
 
   function renderThemes() {

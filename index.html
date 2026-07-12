@@ -221,6 +221,7 @@
             <div id="new-dish-flavor-profile" class="flavor-profile-box"><p class="muted small-text">Pick recipe ingredients, then tap Analyze flavor profile.</p></div>
           </fieldset>
           <button type="button" id="add-dish">Finish adding dish</button>
+          <div id="dish-slot-warning" class="inline-warning" hidden></div>
           <div id="dish-manage-list" class="accordion-list"></div>
         </details>
       </article>
@@ -241,6 +242,13 @@
 
     <section id="shop" class="tab-panel" hidden>
       <article class="card">
+        <h2>Menu slots</h2>
+        <p class="muted">Menu slots let you add more dishes to your restaurant.</p>
+        <p id="slot-info"></p>
+        <button type="button" id="buy-slot" class="primary">Buy next slot</button>
+      </article>
+
+      <article class="card">
         <h2>Upgrades shop</h2>
         <p class="muted">Spend coins and gems on reputation boosts, heart boosts, menu slots, and restaurant cosmetics.</p>
         <div id="upgrade-list" class="theme-list"></div>
@@ -254,13 +262,6 @@
     </section>
 
     <section id="settings" class="tab-panel" hidden>
-      <article class="card">
-        <h2>Menu slots</h2>
-        <p id="slot-info"></p>
-        <button type="button" id="buy-slot" class="primary">Buy next slot</button>
-      </article>
-
-
       <article class="card">
         <h2>Save file</h2>
         <p class="muted">Export downloads a save named after your restaurant and chef, like <strong>Little Pizzeria - Maria.menu-menace-save.json</strong>.</p>
