@@ -128,3 +128,11 @@ Version 9 notes
 - When creating a dish, choose ingredients, tap Analyze flavor profile, then tweak the final recipe flavor profile before saving.
 - Editing a dish opens the full details editor again, including price, category, ingredients, optional ingredients, and dish flavor profile.
 - Existing v7/v8 browser saves are imported automatically when possible.
+
+Version 10 notes
+----------------
+- The Use Recipe Base button now adds only the dish's base recipe. It does not automatically handle extras, weird add-ons, or hold/remove requests, so special orders take a little more player action.
+- Dish trends are gentler now. A trending dish is more likely to appear, but it should not completely take over the customer line.
+- Trends can occasionally have a second mini-trend, like a dish plus a pricing vibe.
+- Trend descriptions are more flavorful and still explain what the trend does.
+- Customer dialogue avoids saying "Chef Gia" or "Chef Chef". It uses the chef name more naturally.

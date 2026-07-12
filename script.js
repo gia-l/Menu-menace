@@ -503,6 +503,7 @@
     if (!state.flavors.length && !state.dishes.length) {
       state.currentTrend = null;
       state.currentTrendId = null;
+      state.secondaryTrend = null;
       return;
     }
     if (!state.currentTrend && state.currentTrendId) state.currentTrend = { type: 'flavor', id: state.currentTrendId };
@@ -572,6 +573,7 @@
     if (!list.length) {
       state.currentTrend = null;
       state.currentTrendId = null;
+      state.secondaryTrend = null;
       state.trendStartedAt = Date.now();
       saveAndRender(showMessage ? 'Create something first, then trends can start.' : '');
       return;
@@ -582,6 +584,13 @@
       while (sameTrend(next, state.currentTrend)) next = randomItem(list);
     }
     state.currentTrend = next;
+    state.secondaryTrend = null;
+    if (list.length > 2 && Math.random() < 0.22) {
+      var second = randomItem(list);
+      var guard = 0;
+      while ((sameTrend(second, next) || sameTrend(second, state.currentTrend)) && guard < 20) { second = randomItem(list); guard++; }
+      if (!sameTrend(second, next)) state.secondaryTrend = second;
+    }
     state.currentTrendId = next.type === 'flavor' ? next.id : null;
     state.trendStartedAt = Date.now();
     saveAndRender(showMessage ? (message || 'New restaurant trend picked!') : '');
@@ -600,21 +609,56 @@
       $('trend-help').textContent = 'Create a flavor or dish in Build to start trends.';
       return;
     }
+    var second = state.secondaryTrend && isTrendValid(state.secondaryTrend) ? state.secondaryTrend : null;
     if (trend.type === 'flavor') {
       var flavor = getFlavor(trend.id);
-      $('trend-text').textContent = flavor.descriptor + ' dishes';
-      $('trend-help').textContent = 'A dish with at least 50% ' + flavor.form + ' gets a bonus tip. Trends only use your restaurant\'s flavors and dishes.';
+      $('trend-text').textContent = flavor.descriptor + ' dishes' + trendSuffix(second);
+      $('trend-help').textContent = trendFlavorLine(flavor);
     } else if (trend.type === 'dish') {
       var dish = getDish(trend.id);
-      $('trend-text').textContent = dishLabel(dish) + ' is trending';
-      $('trend-help').textContent = 'Customers are more likely to ask for this dish, and perfect orders can earn bonus hearts.';
+      $('trend-text').textContent = dishLabel(dish) + ' is trending' + trendSuffix(second);
+      $('trend-help').textContent = trendDishLine(dish);
     } else if (trend.type === 'bargain') {
-      $('trend-text').textContent = 'Bargain bites';
-      $('trend-help').textContent = 'Cheaper-than-ideal dishes feel like a deal and can earn bargain dialogue.';
+      $('trend-text').textContent = 'Bargain bites' + trendSuffix(second);
+      $('trend-help').textContent = 'Customers are watching for good deals today. Cheaper-than-ideal dishes can earn bargain dialogue.';
     } else {
-      $('trend-text').textContent = 'Fancy plates';
-      $('trend-help').textContent = 'Pricier dishes feel fancy and can attract customers who want something special.';
+      $('trend-text').textContent = 'Fancy plates' + trendSuffix(second);
+      $('trend-help').textContent = 'Customers want something that feels special today. Pricier dishes can get fancy-order dialogue.';
     }
+  }
+
+
+  function trendName(trend) {
+    if (!trend) return '';
+    if (trend.type === 'flavor') { var f = getFlavor(trend.id); return f ? f.descriptor + ' dishes' : ''; }
+    if (trend.type === 'dish') { var d = getDish(trend.id); return d ? dishLabel(d) : ''; }
+    if (trend.type === 'bargain') return 'bargain bites';
+    if (trend.type === 'fancy') return 'fancy plates';
+    return '';
+  }
+
+  function trendSuffix(second) {
+    var name = trendName(second);
+    return name ? ' + ' + name : '';
+  }
+
+  function trendFlavorLine(flavor) {
+    var lines = [
+      flavor.descriptor + ' food is the hot topic right now. Dishes with at least 50% ' + flavor.form + ' can earn bonus tips.',
+      'Local food critics seem to be favoring ' + flavor.descriptor + ' plates today. A ' + flavor.form + '-forward dish could do really well.',
+      'Customers are craving ' + flavor.descriptor + ' food today. This is a good time to make that flavor stand out.'
+    ];
+    return randomItem(lines);
+  }
+
+  function trendDishLine(dish) {
+    var name = dish ? dishPlain(dish) : 'that dish';
+    var lines = [
+      'Word is spreading about ' + name + '. Customers are a bit more likely to order it, but other dishes still get attention.',
+      'The local food board is talking about ' + name + ' today. Perfect orders can earn bonus hearts.',
+      name + ' is having a moment. Keep an eye out, but the whole menu is still open.'
+    ];
+    return randomItem(lines);
   }
 
   function getFlavor(id) {
@@ -731,16 +775,20 @@
   function pickDishForCustomer() {
     var weighted = [];
     var trend = state.currentTrend;
+    var secondTrend = state.secondaryTrend;
     for (var i = 0; i < state.dishes.length; i++) {
       var dish = state.dishes[i];
       var weight = 8;
       var ideal = idealDishPrice(dish);
       var vibe = priceVibe(dish.price, ideal);
       var stats = dishStat(dish.id);
-      if (trend && trend.type === 'dish' && trend.id === dish.id) weight += 10;
-      if (trend && trend.type === 'bargain' && vibe === 'cheap') weight += 7;
-      if (trend && trend.type === 'fancy' && vibe === 'expensive') weight += 7;
+      if (trend && trend.type === 'dish' && trend.id === dish.id) weight += 4;
+      if (trend && trend.type === 'bargain' && vibe === 'cheap') weight += 3;
+      if (trend && trend.type === 'fancy' && vibe === 'expensive') weight += 3;
       weight += Math.min(10, Math.floor((stats.hearts || 0) / 3));
+      if (secondTrend && secondTrend.type === 'dish' && secondTrend.id === dish.id) weight += 2;
+      if (secondTrend && secondTrend.type === 'bargain' && vibe === 'cheap') weight += 2;
+      if (secondTrend && secondTrend.type === 'fancy' && vibe === 'expensive') weight += 2;
       if (vibe === 'cheap') weight += 2;
       if (vibe === 'expensive') weight += 1;
       for (var n = 0; n < weight; n++) weighted.push(dish);
@@ -754,6 +802,14 @@
     if (hearts < 20) return false;
     var chance = hearts >= 30 ? 0.12 : 0.06;
     return Math.random() < chance;
+  }
+
+
+  function customerChefName() {
+    var name = safeText(state.chefName || '').trim();
+    if (!name) return 'chef';
+    if (name.toLowerCase() === 'chef') return 'chef';
+    return name;
   }
 
   function buildOrderText(order) {
@@ -776,7 +832,7 @@
       'I\'ll just have {DISH} and I\'ll get outta your hair.',
       'I would give you my {BODY_PART} if I could have {DISH}.',
       'Hi there, dear! May I please have {DISH}?',
-      'Chef {M}, your menu caught my eye. Can I try {DISH}?',
+      '{M}, your menu caught my eye. Can I try {DISH}?',
       'I\'m keeping it simple today. {DISH}, please.',
       'Could I please get {DISH}? I\'ve been thinking about it since I walked in.',
       'Hi {M}, I\'ll have {DISH}. Surprise me with your best version.',
@@ -794,7 +850,7 @@
       'Could you add {WITH} to {DISH}? I think it would be perfect.',
       '{DISH} sounds amazing. Could you make it with {WITH}?',
       'I\'m in a {WITH} mood today. Can I have {DISH} with that?',
-      'Chef {M}, please make me {DISH} with {WITH}.'
+      '{M}, please make me {DISH} with {WITH}.'
     ];
     var withoutTemplates = [
       'Hello! I\'d like {DISH} with no {WITHOUT}, please.',
@@ -816,7 +872,7 @@
       'Extra {EXTRA} on {DISH}, please. I am very serious about this.',
       'Could you give my {DISH} one extra helping of {EXTRA}?',
       'Today feels like an extra {EXTRA} kind of day. {DISH}, please.',
-      'Chef {M}, I trust you. Give me {DISH} with extra {EXTRA}.'
+      '{M}, I trust you. Give me {DISH} with extra {EXTRA}.'
     ];
     var bothTemplates = [
       'My order might seem a bit complicated, {M}, but I would love {DISH} with {WITH} and no {WITHOUT}.',
@@ -829,7 +885,7 @@
     var weirdTemplates = [
       'I know this sounds strange, but can I have {DISH} with {WITH}? I just want to try something weird.',
       'This might be a chaotic order, but could you add {WITH} to {DISH}?',
-      'Chef {M}, please do not judge me, but I want {DISH} with {WITH}.',
+      '{M}, please do not judge me, but I want {DISH} with {WITH}.',
       'I had a dream about {DISH} with {WITH}, and now I need to know if it works.',
       'This is either genius or terrible: {DISH} with {WITH}, please.',
       'I respect your menu rules, so I am making my own too. {DISH} with {WITH}, please.'
@@ -859,7 +915,7 @@
       'That {PLAIN} looks premium. I\'ll try {DISH}.',
       'I\'m treating myself today. Can I get {DISH}?',
       'Your {PLAIN} sounds fancy, and I am here for it.',
-      'Chef {M}, I want the kind of meal that feels important. {DISH}, please.',
+      '{M}, I want the kind of meal that feels important. {DISH}, please.',
       'The {PLAIN} sounds like a special occasion dish.',
       'I saved up for something nice. Can I get {DISH}?',
       'Make me feel rich for five minutes. {DISH}, please.'
@@ -898,7 +954,7 @@
     else template = randomItem(plainTemplates);
 
     return template
-      .replace(/\{M\}/g, state.chefName || 'Chef')
+      .replace(/\{M\}/g, customerChefName())
       .replace(/\{RESTAURANT\}/g, state.restaurantName || 'Menu Menace')
       .replace(/\{DISH\}/g, dishText)
       .replace(/\{PLAIN\}/g, dishPlain(dish))
@@ -1237,8 +1293,9 @@
       showStatus('No active order yet.');
       return;
     }
-    state.pot = expectedIngredients(state.currentOrder).slice();
-    saveAndRender('Recipe base added to the pot.');
+    var dish = getDish(state.currentOrder.dishId);
+    state.pot = dish && Array.isArray(dish.base) ? dish.base.slice() : [];
+    saveAndRender('Recipe base added to the pot. Add extras or clear/remove ingredients for special requests.');
   }
 
   function expectedIngredients(order) {
@@ -1556,7 +1613,7 @@
     var ingredientId = missing[0] || extras[0] || pot[0] || randomOptionalIngredient(dish);
     var message = template
       .replace(/\{DISH\}/g, dishPlain(dish))
-      .replace(/\{M\}/g, state.chefName || 'Chef')
+      .replace(/\{M\}/g, customerChefName())
       .replace(/\{RESTAURANT\}/g, state.restaurantName || 'Menu Menace')
       .replace(/\{F\}/g, top ? top.form : 'flavor')
       .replace(/\{F2\}/g, second ? second.form : 'flavor')
