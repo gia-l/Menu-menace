@@ -1,9 +1,9 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v11-substitutions';
-  var PREVIOUS_SAVE_KEYS = ['menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
-  var VERSION = 11;
+  var SAVE_KEY = 'menu-menace-v13-food-feedback';
+  var PREVIOUS_SAVE_KEYS = ['menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
+  var VERSION = 13;
   var modalSaveHandler = null;
   var state = null;
   var saveAvailable = true;
@@ -66,7 +66,18 @@
     { id: 'night', name: 'Night Market', cost: 8 },
     { id: 'sunset', name: 'Sunset Diner', cost: 10 },
     { id: 'ocean', name: 'Ocean Patio', cost: 12 },
-    { id: 'cocoa', name: 'Cozy Cocoa', cost: 14 }
+    { id: 'cocoa', name: 'Cozy Cocoa', cost: 14 },
+    { id: 'sunrise', name: 'Sunrise Counter', cost: 16 },
+    { id: 'spring', name: 'Spring Garden', cost: 18 },
+    { id: 'summer', name: 'Summer Lemonade', cost: 20 },
+    { id: 'autumn', name: 'Autumn Hearth', cost: 22 },
+    { id: 'winter', name: 'Winter Cocoa Glow', cost: 24 },
+    { id: 'ruby', name: 'Ruby Banquet', cost: 28 },
+    { id: 'sapphire', name: 'Sapphire Supper', cost: 30 },
+    { id: 'emerald', name: 'Emerald Kitchen', cost: 32 },
+    { id: 'amethyst', name: 'Amethyst Room', cost: 34 },
+    { id: 'dragon', name: 'Dragonfire Grill', cost: 40 },
+    { id: 'moon', name: 'Moonlit Menu', cost: 45 }
   ];
 
   var upgrades = [
@@ -911,7 +922,7 @@
       'I love {DISH}, but today I need it with no {WITHOUT}.',
       'Can you make {DISH} without {WITHOUT}? That would be amazing.',
       'No {WITHOUT} on the {DISH}, please. Everything else is fine.',
-      'Chef {M}, I\'ll have {DISH}, just hold the {WITHOUT}.'
+      '{M}, I\'ll have {DISH}, just hold the {WITHOUT}.'
     ];
     var substitutionTemplates = [
       'Could I get {DISH} with {SUBSTITUTION}?',
@@ -921,7 +932,17 @@
       'For my {DISH}, can you substitute {SUBSTITUTION}?',
       'I like the sound of {DISH}, but today I want {SUBSTITUTION}.',
       '{M}, can I get {DISH} with a substitution: {SUBSTITUTION}?',
-      'One {DISH}, please, but make it {SUBSTITUTION}.'
+      'One {DISH}, please, but make it {SUBSTITUTION}.',
+      'Is it too much to ask for {DISH} with {SUBSTITUTION}? No worries if that is a lot.',
+      'I would love {DISH}, but instead could you do {SUBSTITUTION}?',
+      'Tiny switch-up: {DISH}, but {SUBSTITUTION}, please.',
+      'I am feeling adventurous. Can my {DISH} have {SUBSTITUTION}?',
+      'Could you make {DISH} the alternate way, with {SUBSTITUTION}?',
+      'My usual order is {DISH}, but today I am curious about {SUBSTITUTION}.',
+      'If it is not too weird, could I get {DISH} with {SUBSTITUTION}?',
+      'I had a dream that you made {DISH} with {SUBSTITUTION}, so now I have to try it.',
+      'Can you make {DISH}, but trade things around with {SUBSTITUTION}?',
+      'I trust your kitchen. Give me {DISH} with {SUBSTITUTION}.'
     ];
     var extraTemplates = [
       'Could I get {DISH} with extra {EXTRA}?',
@@ -933,12 +954,16 @@
       'Extra {EXTRA} on {DISH}, please. I am very serious about this.',
       'Could you give my {DISH} one extra helping of {EXTRA}?',
       'Today feels like an extra {EXTRA} kind of day. {DISH}, please.',
-      '{M}, I trust you. Give me {DISH} with extra {EXTRA}.'
+      '{M}, I trust you. Give me {DISH} with extra {EXTRA}.',
+      'I have a funny joke for you: what do you call {DISH} with extra {EXTRA}? I do not know, but you should make one for me and we will find out.',
+      'I had a dream that you gave me {DISH} with extra {EXTRA}. Can we make that real?',
+      'Give me {DISH} with extra {EXTRA}; I am building a tiny food memory today.',
+      'Could my {DISH} have a heroic amount of {EXTRA}? Like, one extra heroic scoop.'
     ];
     var bothTemplates = [
       'My order might seem a bit complicated, {M}, but I would love {DISH} with {WITH} and no {WITHOUT}.',
       'Could I get {DISH} with {WITH}, but without {WITHOUT}? Thanks!',
-      'Okay, chef, tiny request: {DISH} with {WITH}, but please skip {WITHOUT}.',
+      'Okay, tiny request: {DISH} with {WITH}, but please skip {WITHOUT}.',
       'I know this has a few steps, but can I get {DISH} with {WITH} and no {WITHOUT}?',
       'For my {DISH}, add {WITH}, hold the {WITHOUT}. You got this, {M}.',
       'Could you make {DISH} with {WITH}, but leave off {WITHOUT}?'
@@ -995,7 +1020,7 @@
       'Hello, I\'m a local food critic. Everyone told me to try {M}\'s famous {PLAIN}. May I have {DISH}?',
       'I\'m reviewing {RESTAURANT} today, and I keep hearing about the {PLAIN}. I\'ll have {DISH}.',
       'I\'m a food critic, and your {PLAIN} has a reputation. Please make me {DISH} with no extra stuff.',
-      'Chef {M}, I follow rising restaurant stars, and your {PLAIN} keeps coming up. I\'ll try {DISH}.',
+      '{M}, I follow rising restaurant stars, and your {PLAIN} keeps coming up. I\'ll try {DISH}.',
       'I\'m here to see if the rumors about {RESTAURANT} are true. Start me with {DISH}.',
       'People say your menu has its own rules. I want to taste that in {DISH}.',
       'I\'m writing a local food column, and {M}\'s {PLAIN} is on my list today.'
@@ -1272,7 +1297,7 @@
     var parts = [];
     var normalized = normalizeFlavorMap(flavorMap || {});
     var keys = Object.keys(normalized).sort(function (a, b) { return normalized[b] - normalized[a]; });
-    for (var i = 0; i < keys.length && i < 3; i++) {
+    for (var i = 0; i < keys.length; i++) {
       var flavor = getFlavor(keys[i]);
       if (flavor && normalized[keys[i]] > 0) parts.push(flavor.descriptor + ' ' + Math.round(normalized[keys[i]]) + '%');
     }
@@ -1289,10 +1314,10 @@
     var map = {};
     var inputs = root.querySelectorAll(selector);
     for (var i = 0; i < inputs.length; i++) {
-      var value = Math.max(0, Math.min(100, Number(inputs[i].value) || 0));
+      var value = Math.max(0, Number(inputs[i].value) || 0);
       if (value > 0) map[inputs[i].getAttribute('data-flavor-id')] = value;
     }
-    return normalizeFlavorMap(map);
+    return map;
   }
 
   function renderFlavorProfileEditor(container, profile, className) {
@@ -1313,7 +1338,6 @@
       var input = document.createElement('input');
       input.type = 'number';
       input.min = '0';
-      input.max = '100';
       input.step = '1';
       input.value = String(Math.round(normalized[keys[i]]));
       input.className = className;
@@ -1324,13 +1348,13 @@
     container.appendChild(grid);
     var summary = document.createElement('p');
     summary.className = 'muted small-text flavor-editor-summary';
-    summary.textContent = 'Current dish profile: ' + flavorSummary(profileFromInputs(container, '.' + className));
+    summary.textContent = 'Current dish profile: ' + flavorSummary(profileFromInputs(container, '.' + className)) + ' (normalized)';
     container.appendChild(summary);
   }
 
   function updateFlavorEditorSummary(container, inputClass) {
     var summary = container.querySelector('.flavor-editor-summary');
-    if (summary) summary.textContent = 'Current dish profile: ' + flavorSummary(profileFromInputs(container, '.' + inputClass));
+    if (summary) summary.textContent = 'Current dish profile: ' + flavorSummary(profileFromInputs(container, '.' + inputClass)) + ' (normalized)';
   }
 
   function normalizeFlavorMap(map) {
@@ -1587,6 +1611,29 @@
     return totals;
   }
 
+  function ingredientFlavorMoment(pot) {
+    var candidates = [];
+    var ids = unique(pot || []);
+    for (var i = 0; i < ids.length; i++) {
+      var ingredient = getIngredient(ids[i]);
+      if (!ingredient) continue;
+      var normalized = normalizeFlavorMap(ingredient.flavors || {});
+      var keys = Object.keys(normalized).sort(function (a, b) { return normalized[b] - normalized[a]; });
+      if (!keys.length) continue;
+      var topFlavor = getFlavor(keys[0]);
+      if (topFlavor) candidates.push({ ingredient: ingredient, flavor: topFlavor, amount: normalized[keys[0]] });
+    }
+    return candidates.length ? randomItem(candidates) : null;
+  }
+
+  function lowDishFlavorMoment(dish, finalFlavors) {
+    if (!dish || !finalFlavors) return null;
+    var keys = Object.keys(finalFlavors).filter(function (id) { return finalFlavors[id] > 0 && finalFlavors[id] < 8 && getFlavor(id); });
+    if (!keys.length) return null;
+    keys.sort(function (a, b) { return finalFlavors[a] - finalFlavors[b]; });
+    return getFlavor(keys[0]);
+  }
+
   function buildFeedback(dish, pot, missing, extras, heartEarned, critic) {
     var finalFlavors = finalFlavorProfile(pot);
     var sorted = Object.keys(finalFlavors).sort(function (a, b) { return finalFlavors[b] - finalFlavors[a]; });
@@ -1671,9 +1718,44 @@
       'I came in curious and left with notes full of compliments.',
       'That was creative without feeling random. Nicely done.'
     ];
+    var ingredientFlavorFeedback = [
+      'The {IF} of the {II} is so nice in this {DISH}.',
+      'I really noticed the {IF} in the {II}. It made the whole {DISH} feel special.',
+      'The {II} brought such good {IF}. That was lovely.',
+      'I loved how the {II} showed off its {IF}. Tiny detail, huge difference.',
+      'The {IF} in the {II} was exactly what this {DISH} needed.',
+      'That {II} had beautiful {IF}. I want a dish that brings that out even more.',
+      '{M}, the {II} really carried the {IF} here.',
+      'The way the {II} added {IF} made this taste like a signature dish.',
+      'I did not expect the {II} to stand out so much, but the {IF} was wonderful.',
+      'The {II} made the {DISH} feel more alive because of that {IF}.'
+    ];
+    var gentleIngredientCritiques = [
+      'I loved the {IF} in the {II}, but I wanted that note to shine a little more.',
+      'The {II} has such good {IF}. Could you make a version that brings it forward more?',
+      'I could taste the {IF} in the {II}, but it was a little shy. Still tasty, though.',
+      'This was good, and I think the {II} could show off even more {IF} next time.',
+      'The {IF} in the {II} was there, but I wanted one more tiny sparkle of it.',
+      'I like where this is going. Maybe let the {II} speak louder with its {IF}.',
+      'This {DISH} is cute, but the {IF} in the {II} could be the star if you wanted.',
+      'I enjoyed it. The {II} just made me wish for a bolder {IF} moment.'
+    ];
+    var subtleFlavorFeedback = [
+      'I never expected the {DISH} to have little {LOW_F} notes, but I liked it. You could bring that out more.',
+      'That tiny hint of {LOW_F} was unexpected in the best way.',
+      'The {LOW_F} was subtle, but it made the {DISH} more interesting.',
+      'There was just a little {LOW_F} hiding in there, and honestly? Cute.',
+      'I caught a tiny {LOW_F} note. I would not mind if you made that bolder someday.',
+      'The quiet {LOW_F} in this {DISH} gave it personality.'
+    ];
 
+    var moment = ingredientFlavorMoment(pot);
+    var subtleFlavor = lowDishFlavorMoment(dish, finalFlavors);
     var template;
     if (hasMistakes) template = randomItem(critiqueTemplates);
+    else if (moment && Math.random() < 0.24) template = randomItem(ingredientFlavorFeedback);
+    else if (moment && Math.random() < 0.16) template = randomItem(gentleIngredientCritiques);
+    else if (subtleFlavor && Math.random() < 0.22) template = randomItem(subtleFlavorFeedback);
     else if (critic) template = randomItem(criticFeedback);
     else if (heartEarned) template = randomItem(heartFeedback);
     else if (stats.hearts >= 15 && Math.random() < 0.35) template = randomItem(popularFeedback);
@@ -1691,6 +1773,9 @@
       .replace(/\{F2\}/g, second ? second.form : 'flavor')
       .replace(/\{DE\}/g, top ? top.descriptor : 'tasty')
       .replace(/\{LOW_DE\}/g, low ? low.descriptor : 'heavy')
+      .replace(/\{LOW_F\}/g, subtleFlavor ? subtleFlavor.form : (low ? low.form : 'flavor'))
+      .replace(/\{IF\}/g, moment && moment.flavor ? moment.flavor.form : (top ? top.form : 'flavor'))
+      .replace(/\{II\}/g, moment && moment.ingredient ? ingredientLabel(moment.ingredient.id, true) : ingredientName(ingredientId, true))
       .replace(/\{I\}/g, ingredientName(ingredientId, true));
 
     return message;

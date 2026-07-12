@@ -615,3 +615,126 @@ body.theme-cocoa {
 .inline-warning .button-row {
   margin-top: 0.35rem;
 }
+
+body.theme-sunrise {
+  --bg: #2b1745;
+  --panel: #fff7ea;
+  --panel-soft: #ffe0b5;
+  --text: #241022;
+  --muted: #72523f;
+  --border: #f0a85b;
+  --accent: #d65a21;
+  --accent-strong: #7b1e48;
+  --shadow: rgba(51, 18, 61, .22);
+}
+
+body.theme-spring {
+  --bg: #f3fff2;
+  --panel: #ffffff;
+  --panel-soft: #e4ffd9;
+  --border: #a6d98f;
+  --accent: #4a8d25;
+  --accent-strong: #2d5716;
+  --shadow: rgba(48, 111, 35, .13);
+}
+
+body.theme-summer {
+  --bg: #fffbd9;
+  --panel: #fffef4;
+  --panel-soft: #fff0a8;
+  --border: #edc14a;
+  --accent: #c46a00;
+  --accent-strong: #744000;
+  --shadow: rgba(180, 112, 0, .13);
+}
+
+body.theme-autumn {
+  --bg: #fff1df;
+  --panel: #fffaf4;
+  --panel-soft: #f7cf9d;
+  --border: #c98245;
+  --accent: #9f3f12;
+  --accent-strong: #5d2108;
+  --shadow: rgba(112, 47, 10, .16);
+}
+
+body.theme-winter {
+  --bg: #edf8ff;
+  --panel: #fbfdff;
+  --panel-soft: #d6edff;
+  --border: #9bbdde;
+  --accent: #3f6f9f;
+  --accent-strong: #203b61;
+  --shadow: rgba(32, 69, 104, .14);
+}
+
+body.theme-ruby {
+  --bg: #fff1f3;
+  --panel: #fffafa;
+  --panel-soft: #ffdce3;
+  --border: #e28ca0;
+  --accent: #b51538;
+  --accent-strong: #6d0d22;
+  --shadow: rgba(130, 8, 35, .16);
+}
+
+body.theme-sapphire {
+  --bg: #eff6ff;
+  --panel: #fbfdff;
+  --panel-soft: #dbeafe;
+  --border: #8bb9ec;
+  --accent: #1d5ea8;
+  --accent-strong: #133965;
+  --shadow: rgba(24, 75, 135, .16);
+}
+
+body.theme-emerald {
+  --bg: #effdf5;
+  --panel: #fbfffd;
+  --panel-soft: #c9f6dc;
+  --border: #6ec595;
+  --accent: #087a45;
+  --accent-strong: #06482b;
+  --shadow: rgba(5, 90, 49, .16);
+}
+
+body.theme-amethyst {
+  --bg: #f7efff;
+  --panel: #fffbff;
+  --panel-soft: #ead8ff;
+  --border: #bd8ce8;
+  --accent: #7830a3;
+  --accent-strong: #461263;
+  --shadow: rgba(85, 25, 125, .18);
+}
+
+body.theme-dragon {
+  --bg: #1f1008;
+  --panel: #fff2df;
+  --panel-soft: #ffd3a1;
+  --text: #281407;
+  --muted: #74472c;
+  --border: #e1782f;
+  --accent: #c93b0e;
+  --accent-strong: #5e1404;
+  --shadow: rgba(65, 19, 0, .24);
+}
+
+body.theme-moon {
+  --bg: #111827;
+  --panel: #f8fbff;
+  --panel-soft: #e0e7ff;
+  --text: #171426;
+  --muted: #5b5f78;
+  --border: #a9b6e8;
+  --accent: #5b5bd6;
+  --accent-strong: #25256f;
+  --shadow: rgba(24, 24, 74, .22);
+}
+
+.flavor-editor-summary,
+.item-card .muted,
+.ingredient-button .muted {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}

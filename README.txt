@@ -155,3 +155,15 @@ Dishes now have three ingredient sections:
 Example: If an Americano's base recipe is espresso + water and a customer asks for milk, Use Recipe Base will still only add espresso + water. You add the milk manually. If the customer asks for extra espresso, Use Recipe Base still only adds espresso + water, and you tap espresso again.
 
 Version 12 note: menu slots now live in the Shop. If you run out of slots while building a dish, the game shows a small warning right under the Finish adding dish button. You can buy the next slot right there and keep editing the same dish draft instead of losing your work.
+
+V13 UPDATE NOTES
+- Customers can now react to the food itself, not just the whole dish flavor. They may compliment the freshness in herbs, the creaminess in milk, the strength in coffee, or other ingredient-specific flavor moments.
+- Gentle critique lines can suggest bringing out an ingredient's flavor more without being rude.
+- Very tiny flavor notes under about 8% can get special comments, like a customer noticing subtle salty notes and saying they liked it.
+- Substitution orders have more personality now, including shy requests and dream-like orders.
+- Dish flavor editing is more flexible. The analyzer still creates a normalized profile from the base recipe, but manual edits can be full-strength values like 100 savory and 100 salty. The game normalizes those values when it summarizes and uses the profile.
+- Flavor summaries now show all flavors instead of cutting off after three.
+- The Shop has more cosmetic themes, including seasonal, gemstone, moonlit, and dragon-inspired themes.
+
+PLAYER TIP
+Menu Menace works best when you give your ingredients strong personalities. A basic ingredient like milk can be creamy, soft, sweet, cold, or moonlit. Coffee can be strong, bitter, smoky, cozy, electric, or magical. Customers will use the words you create, so your restaurant can feel normal, fantasy, silly, dramatic, or completely chaotic.
