@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-scratch-build-v2';
-  var VERSION = 2;
+  var SAVE_KEY = 'menu-menace-scratch-build-v3';
+  var VERSION = 3;
   var state = null;
   var saveAvailable = true;
 
@@ -47,6 +47,7 @@
     { id: 'classic', name: 'Classic Café', cost: 0 },
     { id: 'berry', name: 'Berry Bakery', cost: 3 },
     { id: 'mint', name: 'Mint Bistro', cost: 5 },
+    { id: 'lavender', name: 'Lavender Lounge', cost: 6 },
     { id: 'night', name: 'Night Market', cost: 8 }
   ];
 
@@ -67,6 +68,8 @@
       currentOrder: null,
       dialogueText: '',
       dialogueHidden: true,
+      lastReward: null,
+      manualRerolls: 0,
       pot: [],
       flavors: [],
       ingredients: [],
@@ -76,7 +79,7 @@
     if (blank) return base;
 
     base.flavors = [
-      { id: 'savory', descriptor: 'savory', form: 'savory flavor' },
+      { id: 'savory', descriptor: 'savory', form: 'umami' },
       { id: 'sweet', descriptor: 'sweet', form: 'sweetness' },
       { id: 'fresh', descriptor: 'fresh', form: 'freshness' }
     ];
@@ -217,6 +220,8 @@
     if (!base.currentTheme) base.currentTheme = 'classic';
     if (typeof base.dialogueText !== 'string') base.dialogueText = '';
     if (typeof base.dialogueHidden !== 'boolean') base.dialogueHidden = true;
+    if (!base.lastReward || typeof base.lastReward !== 'object') base.lastReward = null;
+    if (typeof base.manualRerolls !== 'number') base.manualRerolls = 0;
     if (!base.trendStartedAt) base.trendStartedAt = Date.now();
 
     for (var f = 0; f < base.flavors.length; f++) {
@@ -274,7 +279,7 @@
     }
 
     on('quick-customer', 'click', newCustomer);
-    on('reroll-trend', 'click', function () { chooseNewTrend(true); });
+    on('reroll-trend', 'click', rerollTrend);
     on('new-customer', 'click', newCustomer);
     on('go-kitchen', 'click', function () { switchTab('kitchen'); });
     on('jump-build-dish', 'click', function () { switchTab('customize'); openDetails('dish-builder'); });
@@ -377,6 +382,7 @@
     renderMenu();
     renderKitchen();
     renderCustomize();
+    renderCosmetics();
     renderSettings();
     applyTheme();
   }
@@ -405,11 +411,49 @@
       return;
     }
     if (!state.currentTrendId || !state.trendStartedAt || Date.now() - state.trendStartedAt >= fifteenMinutes) {
-      chooseNewTrend(false);
+      state.manualRerolls = 0;
+      chooseNewTrend(false, '');
     }
   }
 
-  function chooseNewTrend(showMessage) {
+  function trendRerollCost() {
+    var rerolls = Math.max(0, state.manualRerolls || 0);
+    return {
+      gems: 2 + Math.floor(rerolls / 2),
+      coins: 120 + rerolls * 80
+    };
+  }
+
+  function rerollTrend() {
+    if (!state.flavors.length) {
+      showStatus('Create a flavor first, then trends can start.');
+      switchTab('customize');
+      openDetails('flavor-builder');
+      return;
+    }
+    if (state.flavors.length < 2) {
+      showStatus('Add at least two flavors before rerolling trends.');
+      return;
+    }
+
+    var cost = trendRerollCost();
+    var paid = '';
+    if ((state.gems || 0) >= cost.gems) {
+      state.gems -= cost.gems;
+      paid = 'Paid ' + cost.gems + ' gems.';
+    } else if ((state.coins || 0) >= cost.coins) {
+      state.coins -= cost.coins;
+      paid = 'Paid ' + cost.coins + ' coins.';
+    } else {
+      showStatus('Reroll costs ' + cost.gems + ' gems or ' + cost.coins + ' coins.');
+      return;
+    }
+
+    state.manualRerolls = (state.manualRerolls || 0) + 1;
+    chooseNewTrend(true, paid + ' New trend picked from your flavor profiles!');
+  }
+
+  function chooseNewTrend(showMessage, message) {
     if (!state.flavors.length) {
       state.currentTrendId = null;
       state.trendStartedAt = Date.now();
@@ -423,18 +467,24 @@
     }
     state.currentTrendId = next;
     state.trendStartedAt = Date.now();
-    saveAndRender(showMessage ? 'New trend picked from your flavor profiles!' : '');
+    saveAndRender(showMessage ? (message || 'New trend picked from your flavor profiles!') : '');
   }
 
   function renderTrend() {
     var flavor = getFlavor(state.currentTrendId);
+    var rerollButton = $('reroll-trend');
+    var cost = trendRerollCost();
+    if (rerollButton) {
+      rerollButton.textContent = 'Reroll (' + cost.gems + ' gems / ' + cost.coins + ' coins)';
+      rerollButton.disabled = state.flavors.length < 2;
+    }
     if (!flavor) {
       $('trend-text').textContent = 'No trend yet';
       $('trend-help').textContent = 'Create at least one flavor profile in Build to start trends.';
       return;
     }
     $('trend-text').textContent = flavor.descriptor + ' dishes';
-    $('trend-help').textContent = 'A dish with at least 50% ' + flavor.form + ' gets a bonus tip. Trends only use your flavor list.';
+    $('trend-help').textContent = 'A dish with at least 50% ' + flavor.form + ' gets a bonus tip. Manual rerolls get more expensive until the next timed trend.';
   }
 
   function getFlavor(id) {
@@ -501,9 +551,10 @@
     };
     order.text = buildOrderText(order);
     state.currentOrder = order;
+    state.lastReward = null;
     state.pot = [];
     saveAndRender('New customer at the counter!');
-    showCustomerBubble(order.text);
+    showCustomerBubble(order.text, null);
   }
 
   function buildOrderText(order) {
@@ -540,8 +591,9 @@
     return randomItem(pool);
   }
 
-  function showCustomerBubble(text) {
+  function showCustomerBubble(text, reward) {
     state.dialogueText = text || '';
+    state.lastReward = reward || null;
     state.dialogueHidden = false;
     saveGame();
     renderDialogue();
@@ -550,13 +602,34 @@
   function renderDialogue() {
     var bubble = $('customer-bubble');
     var text = $('customer-text');
+    var reward = $('customer-reward');
     if (!state.dialogueText || state.dialogueHidden) {
       bubble.hidden = true;
       text.textContent = '';
+      if (reward) {
+        reward.hidden = true;
+        reward.textContent = '';
+      }
       return;
     }
     text.textContent = state.dialogueText;
+    if (reward) {
+      var rewardText = rewardSummary(state.lastReward);
+      reward.hidden = !rewardText;
+      reward.textContent = rewardText;
+    }
     bubble.hidden = false;
+  }
+
+  function rewardSummary(reward) {
+    if (!reward) return '';
+    var parts = ['+' + reward.coins + ' coins', '+' + reward.xp + ' XP'];
+    if (reward.gems > 0) parts.push('+' + reward.gems + ' gems');
+    if (reward.levels > 0) parts.push('level up!');
+    if (reward.trendBonus > 0) parts.push('trend bonus +' + reward.trendBonus);
+    if (reward.missing > 0) parts.push(reward.missing + ' missing');
+    if (reward.extras > 0) parts.push(reward.extras + ' extra');
+    return parts.join(' • ');
   }
 
   function renderOrder() {
@@ -596,13 +669,24 @@
       '<p><strong>Base recipe:</strong> ' + escapeHTML(baseNames || 'nothing yet') + '</p>' +
       '<p><strong>Optional:</strong> ' + escapeHTML(optionalNames || 'none') + '</p>';
     if (includeRemove) {
+      var actions = document.createElement('div');
+      actions.className = 'manage-actions';
+      var edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'secondary compact';
+      edit.textContent = '✏ Edit dish';
+      edit.setAttribute('aria-label', 'Edit dish ' + dish.name);
+      edit.setAttribute('data-id', dish.id);
+      edit.addEventListener('click', function () { editDish(this.getAttribute('data-id')); }, false);
+      actions.appendChild(edit);
       var remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'danger compact';
       remove.textContent = 'Remove dish';
       remove.setAttribute('data-id', dish.id);
       remove.addEventListener('click', function () { removeDish(this.getAttribute('data-id')); }, false);
-      body.appendChild(remove);
+      actions.appendChild(remove);
+      body.appendChild(actions);
     }
     details.appendChild(body);
     return details;
@@ -795,14 +879,25 @@
     var total = Math.max(1, Math.round((basePay + ingredientPay + trendBonus) * (1 - deduction)));
     var xpGain = Math.max(5, Math.round(8 + pot.length * 3 - mistakeCount));
 
+    var oldLevel = state.level || 1;
+    var oldGems = state.gems || 0;
     state.coins += total;
     gainXP(xpGain);
 
-    var feedback = buildFeedback(dish, pot, missing, extras, total, xpGain, trendBonus);
+    var reward = {
+      coins: total,
+      xp: xpGain,
+      gems: Math.max(0, (state.gems || 0) - oldGems),
+      levels: Math.max(0, (state.level || 1) - oldLevel),
+      trendBonus: trendBonus,
+      missing: missing.length,
+      extras: unique(extras).length
+    };
+    var feedback = buildFeedback(dish, pot, missing, extras);
     state.currentOrder = null;
     state.pot = [];
-    saveAndRender('Customer paid ' + total + ' coins and you gained ' + xpGain + ' XP.');
-    showCustomerBubble(feedback);
+    saveAndRender('Served! Check the customer bubble for feedback and rewards.');
+    showCustomerBubble(feedback, reward);
     switchTab('front');
   }
 
@@ -832,7 +927,7 @@
     return totals;
   }
 
-  function buildFeedback(dish, pot, missing, extras, total, xpGain, trendBonus) {
+  function buildFeedback(dish, pot, missing, extras) {
     var finalFlavors = finalFlavorProfile(pot);
     var sorted = Object.keys(finalFlavors).sort(function (a, b) { return finalFlavors[b] - finalFlavors[a]; });
     var top = getFlavor(sorted[0]);
@@ -849,11 +944,7 @@
       .replace(/\{LOW_DE\}/g, low ? low.descriptor : 'heavy')
       .replace(/\{I\}/g, ingredientName(ingredientId, true));
 
-    var addOn = ' I paid ' + total + ' coins and you gained ' + xpGain + ' XP.';
-    if (trendBonus > 0) addOn += ' Bonus tip because it matched today\'s trend!';
-    if (missing.length) addOn += ' Missing: ' + missing.map(function (id) { return ingredientName(id, true); }).join(', ') + '.';
-    if (extras.length) addOn += ' Extra/not requested: ' + unique(extras).map(function (id) { return ingredientName(id, true); }).join(', ') + '.';
-    return message + addOn;
+    return message;
   }
 
   function findLowFlavor(finalFlavors) {
@@ -906,15 +997,44 @@
       var div = document.createElement('div');
       div.className = 'manage-item';
       div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(flavor.descriptor) + '</strong><br><span class="muted">noun form: ' + escapeHTML(flavor.form) + '</span></div>';
+      var actions = document.createElement('div');
+      actions.className = 'manage-actions';
+      var edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'secondary compact';
+      edit.textContent = '✏ Edit';
+      edit.setAttribute('aria-label', 'Edit flavor ' + flavor.descriptor);
+      edit.setAttribute('data-id', flavor.id);
+      edit.addEventListener('click', function () { editFlavor(this.getAttribute('data-id')); }, false);
+      actions.appendChild(edit);
       var button = document.createElement('button');
       button.type = 'button';
       button.className = 'danger compact';
       button.textContent = 'Remove';
       button.setAttribute('data-id', flavor.id);
       button.addEventListener('click', function () { removeFlavor(this.getAttribute('data-id')); }, false);
-      div.appendChild(button);
+      actions.appendChild(button);
+      div.appendChild(actions);
       container.appendChild(div);
     }
+  }
+
+  function editFlavor(id) {
+    var flavor = getFlavor(id);
+    if (!flavor) return;
+    var descriptor = window.prompt('Flavor descriptor/adjective, like savory or magical:', flavor.descriptor);
+    if (descriptor === null) return;
+    descriptor = descriptor.trim().toLowerCase();
+    var form = window.prompt('Noun form, like umami, sweetness, magic, or heat:', flavor.form);
+    if (form === null) return;
+    form = form.trim().toLowerCase();
+    if (!descriptor || !form) {
+      showStatus('Flavor needs both a descriptor and noun form.');
+      return;
+    }
+    flavor.descriptor = descriptor;
+    flavor.form = form;
+    saveAndRender('Flavor updated.');
   }
 
   function addFlavor() {
@@ -1021,14 +1141,63 @@
     var div = document.createElement('div');
     div.className = 'manage-item';
     div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(ing.name) + '</strong><br><span class="muted">' + escapeHTML(flavorSummary(ing.flavors)) + '</span></div>';
+    var actions = document.createElement('div');
+    actions.className = 'manage-actions';
+    var edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'secondary compact';
+    edit.textContent = '✏ Edit';
+    edit.setAttribute('aria-label', 'Edit ingredient ' + ing.name);
+    edit.setAttribute('data-id', ing.id);
+    edit.addEventListener('click', function () { editIngredient(this.getAttribute('data-id')); }, false);
+    actions.appendChild(edit);
     var button = document.createElement('button');
     button.type = 'button';
     button.className = 'danger compact';
     button.textContent = 'Remove';
     button.setAttribute('data-id', ing.id);
     button.addEventListener('click', function () { removeIngredient(this.getAttribute('data-id')); }, false);
-    div.appendChild(button);
+    actions.appendChild(button);
+    div.appendChild(actions);
     return div;
+  }
+
+  function editIngredient(id) {
+    var ing = getIngredient(id);
+    if (!ing) return;
+    var name = window.prompt('Ingredient name:', ing.name);
+    if (name === null) return;
+    name = name.trim();
+    var collective = window.prompt('Collective/plural name:', ing.collective || name);
+    if (collective === null) return;
+    collective = collective.trim() || name;
+    var category = window.prompt('Ingredient category:', ing.category || 'Ingredients');
+    if (category === null) return;
+    category = category.trim() || 'Ingredients';
+    if (!name) {
+      showStatus('Ingredient needs a name.');
+      return;
+    }
+    var flavors = {};
+    for (var i = 0; i < state.flavors.length; i++) {
+      var flavor = state.flavors[i];
+      var current = ing.flavors && ing.flavors[flavor.id] ? ing.flavors[flavor.id] : 0;
+      var amountText = window.prompt('Amount of ' + flavor.descriptor + ' in ' + name + ' (0-100):', String(current));
+      if (amountText === null) return;
+      var amount = Number(amountText);
+      if (isNaN(amount)) amount = 0;
+      amount = Math.max(0, Math.min(100, Math.round(amount)));
+      if (amount > 0) flavors[flavor.id] = amount;
+    }
+    if (Object.keys(flavors).length === 0) {
+      showStatus('Ingredient needs at least one flavor amount.');
+      return;
+    }
+    ing.name = name;
+    ing.collective = collective;
+    ing.category = category;
+    ing.flavors = flavors;
+    saveAndRender('Ingredient updated.');
   }
 
   function removeIngredient(id) {
@@ -1128,6 +1297,68 @@
     }
   }
 
+  function editDish(id) {
+    var dish = getDish(id);
+    if (!dish) return;
+    var name = window.prompt('Dish name:', dish.name);
+    if (name === null) return;
+    name = name.trim();
+    var category = window.prompt('Dish category:', dish.category || 'Menu');
+    if (category === null) return;
+    category = category.trim() || 'Menu';
+    var kind = window.prompt('Dish wording: type single for a/an, or collective for some:', dish.kind || 'single');
+    if (kind === null) return;
+    kind = kind.trim().toLowerCase() === 'collective' ? 'collective' : 'single';
+    var priceText = window.prompt('Price in coins:', String(dish.price || 20));
+    if (priceText === null) return;
+    var price = Math.max(1, Math.round(Number(priceText) || dish.price || 20));
+    if (!name) {
+      showStatus('Dish needs a name.');
+      return;
+    }
+
+    var ingredientHelp = state.ingredients.map(function (ing) { return ing.name; }).join(', ');
+    var baseNow = (dish.base || []).map(function (id) { return ingredientName(id, false); }).join(', ');
+    var baseText = window.prompt('Base recipe ingredients, comma separated. Available: ' + ingredientHelp, baseNow);
+    if (baseText === null) return;
+    var base = ingredientIdsFromText(baseText);
+    if (!base.length) {
+      showStatus('Dish needs at least one base ingredient.');
+      return;
+    }
+    var optionalNow = (dish.optional || []).map(function (id) { return ingredientName(id, false); }).join(', ');
+    var optionalText = window.prompt('Optional ingredients, comma separated. Leave blank for none.', optionalNow);
+    if (optionalText === null) return;
+    var optional = ingredientIdsFromText(optionalText).filter(function (ingId) { return base.indexOf(ingId) === -1; });
+
+    dish.name = name;
+    dish.category = category;
+    dish.kind = kind;
+    dish.price = price;
+    dish.base = base;
+    dish.optional = optional;
+    saveAndRender('Dish updated.');
+  }
+
+  function ingredientIdsFromText(text) {
+    var result = [];
+    var parts = safeText(text).split(',');
+    for (var i = 0; i < parts.length; i++) {
+      var wanted = parts[i].trim().toLowerCase();
+      if (!wanted) continue;
+      var found = null;
+      for (var j = 0; j < state.ingredients.length; j++) {
+        var ing = state.ingredients[j];
+        if (ing.id.toLowerCase() === wanted || ing.name.toLowerCase() === wanted || (ing.collective || '').toLowerCase() === wanted) {
+          found = ing.id;
+          break;
+        }
+      }
+      if (found && result.indexOf(found) === -1) result.push(found);
+    }
+    return result;
+  }
+
   function removeDish(id) {
     var dish = getDish(id);
     if (!dish) return;
@@ -1141,9 +1372,12 @@
     saveAndRender('Dish removed.');
   }
 
+  function renderCosmetics() {
+    renderThemes();
+  }
+
   function renderSettings() {
     renderSlots();
-    renderThemes();
   }
 
   function renderSlots() {

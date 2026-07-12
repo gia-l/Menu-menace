@@ -33,6 +33,7 @@
     <button type="button" class="tab-button" data-tab="front" aria-selected="true">Counter</button>
     <button type="button" class="tab-button" data-tab="kitchen" aria-selected="false">Kitchen</button>
     <button type="button" class="tab-button" data-tab="customize" aria-selected="false">Build</button>
+    <button type="button" class="tab-button" data-tab="cosmetics" aria-selected="false">Cosmetics</button>
     <button type="button" class="tab-button" data-tab="settings" aria-selected="false">Settings</button>
   </nav>
 
@@ -55,6 +56,7 @@
         <div id="customer-bubble" class="speech" hidden>
           <button type="button" id="close-bubble" class="bubble-close" aria-label="Close dialogue">×</button>
           <p id="customer-text"></p>
+          <div id="customer-reward" class="reward-line" hidden></div>
         </div>
         <p id="no-order-text" class="muted">No customer yet. Invite one in when you’re ready.</p>
         <div class="button-row">
@@ -195,6 +197,20 @@
       </article>
     </section>
 
+    <section id="cosmetics" class="tab-panel" hidden>
+      <article class="card">
+        <h2>Cosmetics</h2>
+        <p class="muted">Spend gems on restaurant looks. These only change the vibe, not the difficulty.</p>
+        <div id="theme-list" class="theme-list"></div>
+      </article>
+
+      <article class="card">
+        <h2>How to get gems</h2>
+        <p>Level up by serving customers. Every level gives gems equal to your new level, so level 2 gives 2 gems, level 20 gives 20 gems, and so on.</p>
+        <p class="muted">Rerolling trends can also spend gems, so save some if you want new themes.</p>
+      </article>
+    </section>
+
     <section id="settings" class="tab-panel" hidden>
       <article class="card">
         <h2>Menu slots</h2>
@@ -202,11 +218,6 @@
         <button type="button" id="buy-slot" class="primary">Buy next slot</button>
       </article>
 
-      <article class="card">
-        <h2>Restaurant colors</h2>
-        <p class="muted">Color upgrades cost gems. Leveling up gives gems.</p>
-        <div id="theme-list" class="theme-list"></div>
-      </article>
 
       <article class="card">
         <h2>Save file</h2>
