@@ -222,3 +222,9 @@ v18 mobile tab update
 - Tabs now live near the top of the game instead of taking over the bottom of the phone screen.
 - The tab bar scrolls sideways on small screens, so the buttons stay in one clean row.
 - Tabs now have small icons to make Counter, Kitchen, Build, Stats, Shop, and Settings easier to scan.
+
+v20 category sorting patch
+- Most category sections now start collapsed instead of opening the first category automatically.
+- Ingredients, dishes, flavor profiles, categories, and variety parent choices are sorted alphabetically to make larger restaurants easier to manage.
+- Variety parent choices are grouped by category, so ingredients like cheddar, milk, and broth stay easier to find.
+- When you choose "This is a variety of" while making a new ingredient or dish, the category copies from the parent unless you already picked a different category.

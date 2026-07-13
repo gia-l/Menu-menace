@@ -796,6 +796,30 @@
     return null;
   }
 
+  function alphaText(value) {
+    return safeText(value).toLowerCase();
+  }
+
+  function sortAlpha(a, b) {
+    a = alphaText(a);
+    b = alphaText(b);
+    if (a < b) return -1;
+    if (a > b) return 1;
+    return 0;
+  }
+
+  function sortByName(items, type) {
+    return (items || []).slice().sort(function (a, b) {
+      var an = type === 'dish' ? dishPlain(a) : (a.name || '');
+      var bn = type === 'dish' ? dishPlain(b) : (b.name || '');
+      return sortAlpha(an, bn);
+    });
+  }
+
+  function sortedFlavors() {
+    return state.flavors.slice().sort(function (a, b) { return sortAlpha(a.descriptor, b.descriptor); });
+  }
+
   function topFlavorIdsFromIngredient(id) {
     var ingredient = getIngredient(id);
     if (!ingredient) return [];
@@ -881,9 +905,14 @@
     var items = type === 'dish' ? state.dishes : state.ingredients;
     var fallback = type === 'dish' ? 'No parent dish' : 'No parent ingredient';
     var opts = [{ value: '', text: fallback }];
-    for (var i = 0; i < items.length; i++) {
-      if (items[i].id === currentId) continue;
-      opts.push({ value: items[i].id, text: (type === 'dish' ? dishLabel(items[i]) : ingredientLabel(items[i].id, false)) });
+    var grouped = groupBy(items.filter(function (item) { return item.id !== currentId; }), function (item) { return item.category || (type === 'dish' ? 'Menu' : 'Ingredients'); });
+    var cats = Object.keys(grouped).sort(sortAlpha);
+    for (var c = 0; c < cats.length; c++) {
+      opts.push({ value: '', text: cats[c], disabled: true });
+      var sorted = sortByName(grouped[cats[c]], type);
+      for (var i = 0; i < sorted.length; i++) {
+        opts.push({ value: sorted[i].id, text: '  ' + (type === 'dish' ? dishLabel(sorted[i]) : ingredientLabel(sorted[i].id, false)) });
+      }
     }
     return opts;
   }
@@ -1269,13 +1298,14 @@
     }
 
     var grouped = groupBy(state.dishes, function (dish) { return dish.category || 'Menu'; });
-    var cats = Object.keys(grouped).sort();
+    var cats = Object.keys(grouped).sort(sortAlpha);
     for (var c = 0; c < cats.length; c++) {
-      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', false);
       var content = document.createElement('div');
       content.className = 'accordion-content';
-      for (var d = 0; d < grouped[cats[c]].length; d++) {
-        content.appendChild(makeDishDetails(grouped[cats[c]][d], false));
+      var sortedDishes = sortByName(grouped[cats[c]], 'dish');
+      for (var d = 0; d < sortedDishes.length; d++) {
+        content.appendChild(makeDishDetails(sortedDishes[d], false));
       }
       details.appendChild(content);
       container.appendChild(details);
@@ -1414,9 +1444,9 @@
     }
 
     var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
-    var cats = Object.keys(grouped).sort();
+    var cats = Object.keys(grouped).sort(sortAlpha);
     for (var c = 0; c < cats.length; c++) {
-      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', false);
       var content = document.createElement('div');
       content.className = 'accordion-content ingredient-grid';
       for (var i = 0; i < grouped[cats[c]].length; i++) {
@@ -2044,7 +2074,7 @@
       }
     }
     if (!seen[fallback.toLowerCase()]) result.push(fallback);
-    result.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+    result.sort(sortAlpha);
     return result;
   }
 
@@ -2074,6 +2104,7 @@
       var opt = document.createElement('option');
       opt.value = opts[i].value;
       opt.textContent = opts[i].text;
+      if (opts[i].disabled) opt.disabled = true;
       if (opts[i].value === old) opt.selected = true;
       select.appendChild(opt);
     }
@@ -2109,7 +2140,7 @@
   function applyNewDishVarietyDefaults() {
     var parent = getDish(selectedOptionValue('new-dish-variety-of'));
     if (!parent) return;
-    if (!$('new-dish-category').value.trim()) $('new-dish-category').value = parent.category || 'Menu';
+    if (!$('new-dish-category').value.trim() || $('new-dish-category').value.trim() === 'Menu') $('new-dish-category').value = parent.category || 'Menu';
     $('new-dish-kind').value = parent.kind || 'single';
     $('new-dish-price').value = parent.price || 25;
     setCheckedValues('.base-ingredient-check', parent.base || []);
@@ -2165,6 +2196,7 @@
       var opt = document.createElement('option');
       opt.value = options[i].value;
       opt.textContent = options[i].text;
+      if (options[i].disabled) opt.disabled = true;
       if (options[i].value === value) opt.selected = true;
       select.appendChild(opt);
     }
@@ -2203,8 +2235,9 @@
       container.innerHTML = '<p class="muted">No flavors yet. Add one to unlock trends and ingredient flavor amounts.</p>';
       return;
     }
-    for (var i = 0; i < state.flavors.length; i++) {
-      var flavor = state.flavors[i];
+    var flavors = sortedFlavors();
+    for (var i = 0; i < flavors.length; i++) {
+      var flavor = flavors[i];
       var div = document.createElement('div');
       div.className = 'manage-item';
       div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(flavor.descriptor) + '</strong><br><span class="muted">noun form: ' + escapeHTML(flavor.form) + '</span></div>';
@@ -2289,8 +2322,9 @@
       container.innerHTML = '<p class="muted">Add a flavor profile first.</p>';
       return;
     }
-    for (var i = 0; i < state.flavors.length; i++) {
-      var flavor = state.flavors[i];
+    var flavors = sortedFlavors();
+    for (var i = 0; i < flavors.length; i++) {
+      var flavor = flavors[i];
       var label = document.createElement('label');
       label.textContent = flavor.descriptor;
       var input = document.createElement('input');
@@ -2316,6 +2350,7 @@
     var icon = $('new-ingredient-icon').value.trim();
     var category = $('new-ingredient-category').value.trim() || 'Ingredients';
     var parentId = selectedOptionValue('new-ingredient-variety-of');
+    if (parentId && getIngredient(parentId) && (!category || category === 'Ingredients')) category = getIngredient(parentId).category || 'Ingredients';
     if (!name) {
       showStatus('Name the ingredient first.');
       return;
@@ -2350,12 +2385,13 @@
       return;
     }
     var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
-    var cats = Object.keys(grouped).sort();
+    var cats = Object.keys(grouped).sort(sortAlpha);
     for (var c = 0; c < cats.length; c++) {
-      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', false);
       var content = document.createElement('div');
       content.className = 'accordion-content manage-list';
-      for (var i = 0; i < grouped[cats[c]].length; i++) content.appendChild(makeIngredientManageItem(grouped[cats[c]][i]));
+      var sortedIngredients = sortByName(grouped[cats[c]], 'ingredient');
+      for (var i = 0; i < sortedIngredients.length; i++) content.appendChild(makeIngredientManageItem(sortedIngredients[i]));
       details.appendChild(content);
       container.appendChild(details);
     }
@@ -2396,12 +2432,18 @@
     addTextField(form, 'edit-ingredient-collective', 'Collective/plural name', ing.collective || ing.name, 'tomato sauce');
     addTextField(form, 'edit-ingredient-icon', 'Optional icon / emoji', itemIcon(ing), '🍅');
     addCategoryField(form, 'edit-ingredient-category', 'Ingredient category', ing.category || 'Ingredients', 'ingredient');
-    addSelectField(form, 'edit-ingredient-variety-of', 'This is a variety of', ing.parentId || '', varietyOptions('ingredient', ing.id));
+    var editIngVarietySelect = addSelectField(form, 'edit-ingredient-variety-of', 'This is a variety of', ing.parentId || '', varietyOptions('ingredient', ing.id));
+    editIngVarietySelect.addEventListener('change', function () {
+      var parent = getIngredient(this.value);
+      var catInput = form.querySelector('#edit-ingredient-category');
+      if (parent && catInput && !catInput.value.trim()) catInput.value = parent.category || 'Ingredients';
+    }, false);
     var fs = addModalFieldset(form, 'Flavor amounts');
     var grid = document.createElement('div');
     grid.className = 'small-form-grid';
-    for (var i = 0; i < state.flavors.length; i++) {
-      var flavor = state.flavors[i];
+    var flavors = sortedFlavors();
+    for (var i = 0; i < flavors.length; i++) {
+      var flavor = flavors[i];
       var label = document.createElement('label');
       label.textContent = flavor.descriptor;
       var input = document.createElement('input');
@@ -2479,12 +2521,13 @@
   function appendGroupedIngredientChecks(container, className, selected) {
     selected = selected || [];
     var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
-    var cats = Object.keys(grouped).sort();
+    var cats = Object.keys(grouped).sort(sortAlpha);
     for (var c = 0; c < cats.length; c++) {
-      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion mini-accordion', c === 0);
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion mini-accordion', false);
       var content = document.createElement('div');
       content.className = 'accordion-content check-list grouped-check-list';
-      for (var i = 0; i < grouped[cats[c]].length; i++) content.appendChild(makeCheckRow(className, grouped[cats[c]][i], selected));
+      var sortedIngredients = sortByName(grouped[cats[c]], 'ingredient');
+      for (var i = 0; i < sortedIngredients.length; i++) content.appendChild(makeCheckRow(className, sortedIngredients[i], selected));
       details.appendChild(content);
       container.appendChild(details);
     }
@@ -2507,12 +2550,13 @@
     if (!select) return;
     select.innerHTML = '';
     var grouped = groupBy(state.ingredients, function (ing) { return ing.category || 'Ingredients'; });
-    var cats = Object.keys(grouped).sort();
+    var cats = Object.keys(grouped).sort(sortAlpha);
     for (var c = 0; c < cats.length; c++) {
       var group = document.createElement('optgroup');
       group.label = cats[c];
-      for (var i = 0; i < grouped[cats[c]].length; i++) {
-        var ing = grouped[cats[c]][i];
+      var sortedIngredients = sortByName(grouped[cats[c]], 'ingredient');
+      for (var i = 0; i < sortedIngredients.length; i++) {
+        var ing = sortedIngredients[i];
         var opt = document.createElement('option');
         opt.value = ing.id;
         opt.textContent = ingredientLabel(ing.id, false);
@@ -2685,6 +2729,7 @@
     var icon = $('new-dish-icon').value.trim();
     var category = $('new-dish-category').value.trim() || 'Menu';
     var parentId = selectedOptionValue('new-dish-variety-of');
+    if (parentId && getDish(parentId) && (!category || category === 'Menu')) category = getDish(parentId).category || 'Menu';
     var kind = $('new-dish-kind').value;
     var price = Math.max(1, Math.round(Number($('new-dish-price').value) || 20));
     if (!name) {
@@ -2739,12 +2784,13 @@
       return;
     }
     var grouped = groupBy(state.dishes, function (dish) { return dish.category || 'Menu'; });
-    var cats = Object.keys(grouped).sort();
+    var cats = Object.keys(grouped).sort(sortAlpha);
     for (var c = 0; c < cats.length; c++) {
-      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', c === 0);
+      var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', false);
       var content = document.createElement('div');
       content.className = 'accordion-content';
-      for (var d = 0; d < grouped[cats[c]].length; d++) content.appendChild(makeDishDetails(grouped[cats[c]][d], true));
+      var sortedDishes = sortByName(grouped[cats[c]], 'dish');
+      for (var d = 0; d < sortedDishes.length; d++) content.appendChild(makeDishDetails(sortedDishes[d], true));
       details.appendChild(content);
       container.appendChild(details);
     }
@@ -2757,7 +2803,12 @@
     addTextField(form, 'edit-dish-name', 'Dish name', dish.name, 'spaghetti');
     addTextField(form, 'edit-dish-icon', 'Optional icon / emoji', itemIcon(dish), '🍝');
     addCategoryField(form, 'edit-dish-category', 'Dish category', dish.category || 'Menu', 'dish');
-    addSelectField(form, 'edit-dish-variety-of', 'This is a variety of', dish.parentId || '', varietyOptions('dish', dish.id));
+    var editDishVarietySelect = addSelectField(form, 'edit-dish-variety-of', 'This is a variety of', dish.parentId || '', varietyOptions('dish', dish.id));
+    editDishVarietySelect.addEventListener('change', function () {
+      var parent = getDish(this.value);
+      var catInput = form.querySelector('#edit-dish-category');
+      if (parent && catInput && !catInput.value.trim()) catInput.value = parent.category || 'Menu';
+    }, false);
     addSelectField(form, 'edit-dish-kind', 'Dish wording', dish.kind || 'single', [
       { value: 'single', text: 'a/an dish, like a hamburger' },
       { value: 'collective', text: 'some dish, like some pizza or spaghetti' }
@@ -2920,12 +2971,13 @@
     container.appendChild(topDetails);
 
     var grouped = groupBy(state.dishes, function (dish) { return dish.category || 'Menu'; });
-    var cats = Object.keys(grouped).sort();
+    var cats = Object.keys(grouped).sort(sortAlpha);
     for (var c = 0; c < cats.length; c++) {
       var details = makeDetails(cats[c] + ' (' + grouped[cats[c]].length + ')', 'accordion', false);
       var content = document.createElement('div');
       content.className = 'accordion-content';
-      for (var d = 0; d < grouped[cats[c]].length; d++) content.appendChild(makeDishStatCard(grouped[cats[c]][d]));
+      var sortedDishes = sortByName(grouped[cats[c]], 'dish');
+      for (var d = 0; d < sortedDishes.length; d++) content.appendChild(makeDishStatCard(sortedDishes[d]));
       details.appendChild(content);
       container.appendChild(details);
     }
