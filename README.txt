@@ -191,3 +191,12 @@ V16 notes
 - Start typing a category to reuse an existing one from the dropdown.
 - If the category does not exist yet, just type the new category name and save. The game will create it automatically.
 - This helps avoid tiny category duplicates like Breakfast vs. Breakfasts or Bread vs. Breads.
+
+Version 17 tiny trend fix
+-------------------------
+Trend description wording now locks in when the trend starts. The countdown still updates every second, but the sentence under the trend title should not keep changing or make the page jump around.
+
+v18 mobile tab update
+- Tabs now live near the top of the game instead of taking over the bottom of the phone screen.
+- The tab bar scrolls sideways on small screens, so the buttons stay in one clean row.
+- Tabs now have small icons to make Counter, Kitchen, Build, Stats, Shop, and Settings easier to scan.

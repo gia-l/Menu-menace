@@ -65,7 +65,7 @@ body {
   color: var(--text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.45;
-  padding-bottom: 84px;
+  padding-bottom: 0;
 }
 
 .skip-link {
@@ -138,18 +138,37 @@ p { margin-bottom: 10px; }
 .stat strong { display: block; font-size: 1.05rem; }
 
 .tabs {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: sticky;
+  top: 0;
   z-index: 20;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-  padding: 8px max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right));
   background: var(--panel);
-  border-top: 2px solid var(--border);
-  box-shadow: 0 -4px 16px var(--shadow);
+  border-bottom: 2px solid var(--border);
+  box-shadow: 0 4px 16px var(--shadow);
+}
+.tabs::after {
+  content: "";
+  flex: 0 0 4px;
+}
+.tabs button {
+  flex: 0 0 auto;
+  min-width: max-content;
+  min-height: 42px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tabs button span {
+  margin-right: 0.25rem;
 }
 
 main {
@@ -400,16 +419,11 @@ legend { font-weight: 950; }
 .danger-zone { border-color: var(--danger); }
 
 @media (min-width: 1050px) {
-  body { padding-bottom: 0; }
   .tabs {
-    position: sticky;
-    top: 0;
-    max-width: 1120px;
-    margin: 0 auto;
-    border: 2px solid var(--border);
-    border-top: 0;
+    border-left: 2px solid var(--border);
+    border-right: 2px solid var(--border);
     border-radius: 0 0 18px 18px;
-    padding: 8px;
+    justify-content: flex-start;
   }
   main { padding: 18px; }
   .tab-panel {
@@ -436,7 +450,8 @@ legend { font-weight: 950; }
   .manage-actions { justify-content: stretch; }
   .manage-actions button { flex: 1 1 120px; }
   .ingredient-grid { grid-template-columns: 1fr; }
-  .tabs button { padding-left: 6px; padding-right: 6px; font-size: .92rem; }
+  .tabs { padding-top: 7px; padding-bottom: 7px; }
+  .tabs button { font-size: .92rem; min-height: 40px; padding: 8px 12px; }
 }
 
 .modal-backdrop {
@@ -543,12 +558,9 @@ body.theme-cocoa {
   font-weight: 800;
 }
 @media (min-width: 760px) {
-  .tabs { grid-template-columns: repeat(6, 1fr); }
   .stats { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 }
 @media (max-width: 759px) {
-  .tabs { grid-template-columns: repeat(3, 1fr); }
-  body { padding-bottom: 150px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats-grid-big { grid-template-columns: 1fr; }
 }

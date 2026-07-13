@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v15-trend-countdown';
+  var SAVE_KEY = 'menu-menace-v16-category-search';
   var PREVIOUS_SAVE_KEYS = ['menu-menace-v14-smarter-orders', 'menu-menace-v13-food-feedback', 'menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
   var VERSION = 15;
   var modalSaveHandler = null;
@@ -642,6 +642,10 @@
     }
     state.currentTrendId = next.type === 'flavor' ? next.id : null;
     state.trendStartedAt = Date.now();
+    state.trendDisplayKey = '';
+    state.currentTrendTitle = '';
+    state.currentTrendHelp = '';
+    ensureTrendDisplay();
     saveAndRender(showMessage ? (message || 'New restaurant trend picked!') : '');
   }
 
@@ -662,22 +666,9 @@
       if (emptyTimer) emptyTimer.textContent = '';
       return;
     }
-    var second = state.secondaryTrend && isTrendValid(state.secondaryTrend) ? state.secondaryTrend : null;
-    if (trend.type === 'flavor') {
-      var flavor = getFlavor(trend.id);
-      $('trend-text').textContent = flavor.descriptor + ' dishes' + trendSuffix(second);
-      $('trend-help').textContent = trendFlavorLine(flavor);
-    } else if (trend.type === 'dish') {
-      var dish = getDish(trend.id);
-      $('trend-text').textContent = dishLabel(dish) + ' is trending' + trendSuffix(second);
-      $('trend-help').textContent = trendDishLine(dish);
-    } else if (trend.type === 'bargain') {
-      $('trend-text').textContent = 'Bargain bites' + trendSuffix(second);
-      $('trend-help').textContent = 'Customers are watching for good deals today. Cheaper-than-ideal dishes can earn bargain dialogue.';
-    } else {
-      $('trend-text').textContent = 'Fancy plates' + trendSuffix(second);
-      $('trend-help').textContent = 'Customers want something that feels special today. Pricier dishes can get fancy-order dialogue.';
-    }
+    ensureTrendDisplay();
+    $('trend-text').textContent = state.currentTrendTitle || 'Current trend';
+    $('trend-help').textContent = state.currentTrendHelp || 'Customers are watching this trend.';
   }
 
 
@@ -705,6 +696,57 @@
     var name = trendName(second);
     return name ? ' + ' + name : '';
   }
+
+  function trendDisplayKey() {
+    var trend = state.currentTrend || (state.currentTrendId ? { type: 'flavor', id: state.currentTrendId } : null);
+    var second = state.secondaryTrend && isTrendValid(state.secondaryTrend) ? state.secondaryTrend : null;
+    var mainKey = trend ? (trend.type + ':' + (trend.id || '')) : 'none';
+    var secondKey = second ? (second.type + ':' + (second.id || '')) : 'none';
+    return mainKey + '|' + secondKey;
+  }
+
+  function ensureTrendDisplay() {
+    var trend = state.currentTrend || (state.currentTrendId ? { type: 'flavor', id: state.currentTrendId } : null);
+    if (!isTrendValid(trend)) return;
+    var second = state.secondaryTrend && isTrendValid(state.secondaryTrend) ? state.secondaryTrend : null;
+    var key = trendDisplayKey();
+    if (state.trendDisplayKey === key && state.currentTrendTitle && state.currentTrendHelp) return;
+    state.trendDisplayKey = key;
+    state.currentTrendTitle = buildTrendTitle(trend, second);
+    state.currentTrendHelp = buildTrendHelp(trend);
+    saveGame();
+  }
+
+  function buildTrendTitle(trend, second) {
+    if (!trend) return 'Current trend';
+    if (trend.type === 'flavor') {
+      var flavor = getFlavor(trend.id);
+      return (flavor ? flavor.descriptor : 'flavor') + ' dishes' + trendSuffix(second);
+    }
+    if (trend.type === 'dish') {
+      var dish = getDish(trend.id);
+      return (dish ? dishLabel(dish) : 'a dish') + ' is trending' + trendSuffix(second);
+    }
+    if (trend.type === 'bargain') return 'Bargain bites' + trendSuffix(second);
+    if (trend.type === 'fancy') return 'Fancy plates' + trendSuffix(second);
+    return 'Current trend';
+  }
+
+  function buildTrendHelp(trend) {
+    if (!trend) return 'Customers are watching this trend.';
+    if (trend.type === 'flavor') {
+      var flavor = getFlavor(trend.id);
+      return flavor ? trendFlavorLine(flavor) : 'Customers are craving a certain flavor today.';
+    }
+    if (trend.type === 'dish') {
+      var dish = getDish(trend.id);
+      return trendDishLine(dish);
+    }
+    if (trend.type === 'bargain') return 'Customers are watching for good deals today. Cheaper-than-ideal dishes can earn bargain dialogue.';
+    if (trend.type === 'fancy') return 'Customers want something that feels special today. Pricier dishes can get fancy-order dialogue.';
+    return 'Customers are watching this trend.';
+  }
+
 
   function trendFlavorLine(flavor) {
     var lines = [
