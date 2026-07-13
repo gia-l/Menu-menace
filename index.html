@@ -46,9 +46,9 @@
     <section id="front" class="tab-panel">
       <article class="card top-card">
         <div>
-          <h2>Today’s top trend</h2>
+          <div class="trend-title-row"><h2>Today’s top trend</h2><span id="trend-countdown" class="trend-countdown" aria-label="Time until trend changes"></span></div>
           <p id="trend-text" class="trend-text">Loading...</p>
-          <p id="trend-help" class="muted">Trends only use flavor profiles you created or kept.</p>
+          <p id="trend-help" class="muted">Trends rotate every seven minutes.</p>
         </div>
         <button type="button" id="reroll-trend" class="secondary">Reroll</button>
       </article>
@@ -131,7 +131,7 @@
 
         <details id="flavor-builder" class="builder-panel" open>
           <summary>1. Flavor profiles</summary>
-          <p class="muted">Trends are picked only from this list. No spicy trend unless you add spicy.</p>
+          <p class="muted">Create flavor profiles with an adjective and noun, like fresh/freshness, creamy/cream, magical/magic, or fiery/dragon heat.</p>
           <div class="form-grid">
             <label>Descriptor
               <input id="new-flavor-descriptor" type="text" placeholder="spicy">
@@ -157,7 +157,9 @@
               <input id="new-ingredient-icon" type="text" placeholder="🍅" inputmode="text" autocomplete="off">
             </label>
             <label>Ingredient category
-              <input id="new-ingredient-category" type="text" placeholder="Toppings" value="Ingredients">
+              <input id="new-ingredient-category" type="text" placeholder="Search or create a category" value="Ingredients" list="ingredient-category-options" autocomplete="off">
+              <datalist id="ingredient-category-options"></datalist>
+              <span class="field-hint">Search existing categories, or type a new one.</span>
             </label>
           </div>
           <fieldset>
@@ -179,7 +181,9 @@
               <input id="new-dish-icon" type="text" placeholder="🍔" inputmode="text" autocomplete="off">
             </label>
             <label>Dish category
-              <input id="new-dish-category" type="text" placeholder="Sandwiches">
+              <input id="new-dish-category" type="text" placeholder="Search or create a category" list="dish-category-options" autocomplete="off">
+              <datalist id="dish-category-options"></datalist>
+              <span class="field-hint">Search existing categories, or type a new one.</span>
             </label>
             <label>Dish wording
               <select id="new-dish-kind">

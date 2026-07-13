@@ -1,9 +1,9 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v14-smarter-orders';
-  var PREVIOUS_SAVE_KEYS = ['menu-menace-v13-food-feedback', 'menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
-  var VERSION = 14;
+  var SAVE_KEY = 'menu-menace-v15-trend-countdown';
+  var PREVIOUS_SAVE_KEYS = ['menu-menace-v14-smarter-orders', 'menu-menace-v13-food-feedback', 'menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
+  var VERSION = 15;
   var modalSaveHandler = null;
   var state = null;
   var saveAvailable = true;
@@ -33,6 +33,7 @@
     'Ooh, so {DE}! Nice!',
     'I think your {DISH} is kinda {DE}. It is a little unusual, but it works so well.',
     'I like how it is not too {LOW_DE}. Good job.',
+    'I like that the {LOW_DE} note stays gentle instead of taking over.',
     'The {F} really stood out in this dish and it balances well with the {I}.',
     'The {F} of the {DISH} is absolutely phenomenal, {M}.',
     'I loved how {DE} this tasted. You really made it work, {M}.',
@@ -359,7 +360,8 @@
     window.setInterval(function () {
       maybeRefreshTrend();
       renderStatsAndHeader();
-    }, 30000);
+      renderTrend();
+    }, 1000);
   }
 
   function bindEvents() {
@@ -522,6 +524,7 @@
     renderStatsTab();
     renderShop();
     renderSettings();
+    renderCategoryOptionLists();
     applyTheme();
   }
 
@@ -545,7 +548,7 @@
   }
 
   function maybeRefreshTrend() {
-    var fifteenMinutes = 15 * 60 * 1000;
+    var trendDuration = 7 * 60 * 1000;
     if (!state.flavors.length && !state.dishes.length) {
       state.currentTrend = null;
       state.currentTrendId = null;
@@ -553,7 +556,7 @@
       return;
     }
     if (!state.currentTrend && state.currentTrendId) state.currentTrend = { type: 'flavor', id: state.currentTrendId };
-    if (!isTrendValid(state.currentTrend) || !state.trendStartedAt || Date.now() - state.trendStartedAt >= fifteenMinutes) {
+    if (!isTrendValid(state.currentTrend) || !state.trendStartedAt || Date.now() - state.trendStartedAt >= trendDuration) {
       state.manualRerolls = 0;
       chooseNewTrend(false, '');
     }
@@ -650,9 +653,13 @@
       rerollButton.textContent = 'Reroll (' + cost.gems + ' gems / ' + cost.coins + ' coins)';
       rerollButton.disabled = availableTrends().length < 2;
     }
+    var countdownEl = $('trend-countdown');
+    if (countdownEl) countdownEl.textContent = trendCountdownText();
     if (!isTrendValid(trend)) {
       $('trend-text').textContent = 'No trend yet';
       $('trend-help').textContent = 'Create a flavor or dish in Build to start trends.';
+      var emptyTimer = $('trend-countdown');
+      if (emptyTimer) emptyTimer.textContent = '';
       return;
     }
     var second = state.secondaryTrend && isTrendValid(state.secondaryTrend) ? state.secondaryTrend : null;
@@ -671,6 +678,17 @@
       $('trend-text').textContent = 'Fancy plates' + trendSuffix(second);
       $('trend-help').textContent = 'Customers want something that feels special today. Pricier dishes can get fancy-order dialogue.';
     }
+  }
+
+
+  function trendCountdownText() {
+    if (!state || !state.trendStartedAt || !isTrendValid(state.currentTrend)) return '';
+    var duration = 7 * 60 * 1000;
+    var remaining = Math.max(0, duration - (Date.now() - state.trendStartedAt));
+    var totalSeconds = Math.ceil(remaining / 1000);
+    var minutes = Math.floor(totalSeconds / 60);
+    var seconds = totalSeconds % 60;
+    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
   }
 
 
@@ -875,11 +893,11 @@
       var ideal = idealDishPrice(dish);
       var vibe = priceVibe(dish.price, ideal);
       var stats = dishStat(dish.id);
-      if (trend && trend.type === 'dish' && trend.id === dish.id) weight += 4;
+      if (trend && trend.type === 'dish' && trend.id === dish.id) weight += 2;
       if (trend && trend.type === 'bargain' && vibe === 'cheap') weight += 3;
       if (trend && trend.type === 'fancy' && vibe === 'expensive') weight += 3;
       weight += Math.min(10, Math.floor((stats.hearts || 0) / 3));
-      if (secondTrend && secondTrend.type === 'dish' && secondTrend.id === dish.id) weight += 2;
+      if (secondTrend && secondTrend.type === 'dish' && secondTrend.id === dish.id) weight += 1;
       if (secondTrend && secondTrend.type === 'bargain' && vibe === 'cheap') weight += 2;
       if (secondTrend && secondTrend.type === 'fancy' && vibe === 'expensive') weight += 2;
       if (vibe === 'cheap') weight += 2;
@@ -954,7 +972,7 @@
       'Could I get {DISH}, but skip the {WITHOUT}? Thanks, {M}.',
       'I love {DISH}, but today I need it with no {WITHOUT}.',
       'Can you make {DISH} without {WITHOUT}? That would be amazing.',
-      'No {WITHOUT} on the {DISH}, please. Everything else is fine.',
+      'No {WITHOUT} on the {PLAIN}, please. Everything else is fine.',
       '{M}, I\'ll have {DISH}, just hold the {WITHOUT}.'
     ];
     var substitutionTemplates = [
@@ -962,14 +980,14 @@
       'Hi {M}, can you make {DISH} with {SUBSTITUTION}?',
       'I want {DISH}, but swap in {SUBSTITUTION}, please.',
       'Could you do {DISH} with {SUBSTITUTION}? I want to try that version.',
-      'For my {DISH}, can you substitute {SUBSTITUTION}?',
+      'For my {PLAIN}, can you substitute {SUBSTITUTION}?',
       'I like the sound of {DISH}, but today I want {SUBSTITUTION}.',
       '{M}, can I get {DISH} with a substitution: {SUBSTITUTION}?',
       'One {DISH}, please, but make it {SUBSTITUTION}.',
       'Is it too much to ask for {DISH} with {SUBSTITUTION}? No worries if that is a lot.',
       'I would love {DISH}, but instead could you do {SUBSTITUTION}?',
       'Tiny switch-up: {DISH}, but {SUBSTITUTION}, please.',
-      'I am feeling adventurous. Can my {DISH} have {SUBSTITUTION}?',
+      'I am feeling adventurous. Can my {PLAIN} have {SUBSTITUTION}?',
       'Could you make {DISH} the alternate way, with {SUBSTITUTION}?',
       'My usual order is {DISH}, but today I am curious about {SUBSTITUTION}.',
       'If it is not too weird, could I get {DISH} with {SUBSTITUTION}?',
@@ -982,23 +1000,23 @@
       'I\'d love {DISH}, and please make it extra {EXTRA}.',
       'Can I have {DISH} with extra {EXTRA}? I\'m craving that today.',
       'Hello! {DISH} with extra {EXTRA}, please.',
-      'Hey {M}, can you double up the {EXTRA} on my {DISH}?',
+      'Hey {M}, can you double up the {EXTRA} on my {PLAIN}?',
       'I want {DISH}, but make the {EXTRA} impossible to miss.',
-      'Extra {EXTRA} on {DISH}, please. I am very serious about this.',
-      'Could you give my {DISH} one extra helping of {EXTRA}?',
+      'Extra {EXTRA} on {PLAIN}, please. I am very serious about this.',
+      'Could you give my {PLAIN} one extra helping of {EXTRA}?',
       'Today feels like an extra {EXTRA} kind of day. {DISH}, please.',
       '{M}, I trust you. Give me {DISH} with extra {EXTRA}.',
       'I have a funny joke for you: what do you call {DISH} with extra {EXTRA}? I do not know, but you should make one for me and we will find out.',
       'I had a dream that you gave me {DISH} with extra {EXTRA}. Can we make that real?',
       'Give me {DISH} with extra {EXTRA}; I am building a tiny food memory today.',
-      'Could my {DISH} have a heroic amount of {EXTRA}? Like, one extra heroic scoop.'
+      'Could my {PLAIN} have a heroic amount of {EXTRA}? Like, one extra heroic scoop.'
     ];
     var bothTemplates = [
       'My order might seem a bit complicated, {M}, but I would love {DISH} with {WITH} and no {WITHOUT}.',
       'Could I get {DISH} with {WITH}, but without {WITHOUT}? Thanks!',
       'Okay, tiny request: {DISH} with {WITH}, but please skip {WITHOUT}.',
       'I know this has a few steps, but can I get {DISH} with {WITH} and no {WITHOUT}?',
-      'For my {DISH}, add {WITH}, hold the {WITHOUT}. You got this, {M}.',
+      'For my {PLAIN}, add {WITH}, hold the {WITHOUT}. You got this, {M}.',
       'Could you make {DISH} with {WITH}, but leave off {WITHOUT}?'
     ];
     var weirdTemplates = [
@@ -1763,7 +1781,9 @@
       '{M}, the {II} really carried the {IF} here.',
       'The way the {II} added {IF} made this taste like a signature dish.',
       'I did not expect the {II} to stand out so much, but the {IF} was wonderful.',
-      'The {II} made the {DISH} feel more alive because of that {IF}.'
+      'The {II} made the {DISH} feel more alive because of that {IF}.',
+      'Did you put {II} in this? I noticed it in the best way.',
+      'I could tell there was {II} in here, and it gave the {DISH} a cute little moment.'
     ];
     var gentleIngredientCritiques = [
       'I loved the {IF} in the {II}, but I wanted that note to shine a little more.',
@@ -1773,7 +1793,9 @@
       'The {IF} in the {II} was there, but I wanted one more tiny sparkle of it.',
       'I like where this is going. Maybe let the {II} speak louder with its {IF}.',
       'This {DISH} is cute, but the {IF} in the {II} could be the star if you wanted.',
-      'I enjoyed it. The {II} just made me wish for a bolder {IF} moment.'
+      'I enjoyed it. The {II} just made me wish for a bolder {IF} moment.',
+      'Did you put {II} in this? I noticed it, but I think I would like it better if it blended in a little more.',
+      'The {II} was interesting here. I am not fully sold yet, but I like the idea.'
     ];
     var subtleFlavorFeedback = [
       'I never expected the {DISH} to have little {LOW_F} notes, but I liked it. You could bring that out more.',
@@ -1783,14 +1805,22 @@
       'I caught a tiny {LOW_F} note. I would not mind if you made that bolder someday.',
       'The quiet {LOW_F} in this {DISH} gave it personality.'
     ];
+    var absentFlavorFeedback = [
+      'I like that this {DISH} is not {ABSENT_DE} at all. It knows what it wants to be.',
+      'This is not {ABSENT_DE} at all, and honestly that works for it.',
+      'No {ABSENT_F} here, just a really clear {DISH}. I liked that.',
+      'I could imagine a {ABSENT_DE} version of this someday, but this version is lovely as-is.'
+    ];
 
     var moment = ingredientFlavorMoment(pot);
     var subtleFlavor = lowDishFlavorMoment(dish, finalFlavors);
+    var absentFlavor = absentDishFlavorMoment(finalFlavors);
     var template;
     if (hasMistakes) template = randomItem(critiqueTemplates);
     else if (moment && Math.random() < 0.24) template = randomItem(ingredientFlavorFeedback);
     else if (moment && Math.random() < 0.16) template = randomItem(gentleIngredientCritiques);
     else if (subtleFlavor && Math.random() < 0.22) template = randomItem(subtleFlavorFeedback);
+    else if (absentFlavor && Math.random() < 0.06) template = randomItem(absentFlavorFeedback);
     else if (critic) template = randomItem(criticFeedback);
     else if (heartEarned) template = randomItem(heartFeedback);
     else if (stats.hearts >= 15 && Math.random() < 0.35) template = randomItem(popularFeedback);
@@ -1809,19 +1839,31 @@
       .replace(/\{DE\}/g, top ? top.descriptor : 'tasty')
       .replace(/\{LOW_DE\}/g, low ? low.descriptor : 'heavy')
       .replace(/\{LOW_F\}/g, subtleFlavor ? subtleFlavor.form : (low ? low.form : 'flavor'))
+      .replace(/\{ABSENT_DE\}/g, absentFlavor ? absentFlavor.descriptor : 'spicy')
+      .replace(/\{ABSENT_F\}/g, absentFlavor ? absentFlavor.form : 'spice')
       .replace(/\{IF\}/g, moment && moment.flavor ? moment.flavor.form : (top ? top.form : 'flavor'))
-      .replace(/\{II\}/g, moment && moment.ingredient ? ingredientLabel(moment.ingredient.id, true) : ingredientName(ingredientId, true))
+      .replace(/\{II\}/g, moment && moment.ingredient ? ingredientName(moment.ingredient.id, true) : ingredientName(ingredientId, true))
       .replace(/\{I\}/g, ingredientName(ingredientId, true));
 
     return message;
   }
 
   function findLowFlavor(finalFlavors) {
-    if (!state.flavors.length) return null;
-    for (var i = 0; i < state.flavors.length; i++) {
-      if (!finalFlavors[state.flavors[i].id] || finalFlavors[state.flavors[i].id] < 5) return state.flavors[i];
-    }
-    return state.flavors[0];
+    if (!finalFlavors) return null;
+    var present = Object.keys(finalFlavors).filter(function (id) {
+      return finalFlavors[id] > 0 && finalFlavors[id] <= 20 && getFlavor(id);
+    });
+    if (!present.length) return null;
+    present.sort(function (a, b) { return finalFlavors[a] - finalFlavors[b]; });
+    return getFlavor(present[0]);
+  }
+
+  function absentDishFlavorMoment(finalFlavors) {
+    if (!state.flavors.length || !finalFlavors) return null;
+    var missing = state.flavors.filter(function (flavor) {
+      return !finalFlavors[flavor.id] || finalFlavors[flavor.id] <= 0;
+    });
+    return missing.length ? randomItem(missing) : null;
   }
 
   function gainXP(amount) {
@@ -1892,6 +1934,63 @@
     input.placeholder = placeholder || '';
     label.appendChild(input);
     form.appendChild(label);
+    return input;
+  }
+
+
+
+  function categoryList(type) {
+    var items = type === 'dish' ? state.dishes : state.ingredients;
+    var fallback = type === 'dish' ? 'Menu' : 'Ingredients';
+    var seen = {};
+    var result = [];
+    for (var i = 0; i < items.length; i++) {
+      var cat = safeText(items[i].category || fallback).trim() || fallback;
+      var key = cat.toLowerCase();
+      if (!seen[key]) {
+        seen[key] = true;
+        result.push(cat);
+      }
+    }
+    if (!seen[fallback.toLowerCase()]) result.push(fallback);
+    result.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+    return result;
+  }
+
+  function fillDatalist(listId, values) {
+    var list = $(listId);
+    if (!list) return;
+    list.innerHTML = '';
+    for (var i = 0; i < values.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = values[i];
+      list.appendChild(opt);
+    }
+  }
+
+  function renderCategoryOptionLists() {
+    fillDatalist('ingredient-category-options', categoryList('ingredient'));
+    fillDatalist('dish-category-options', categoryList('dish'));
+  }
+
+  function addCategoryField(form, id, labelText, value, type) {
+    var input = addTextField(form, id, labelText, value, type === 'dish' ? 'Search or create a dish category' : 'Search or create an ingredient category');
+    var listId = id + '-options';
+    input.setAttribute('list', listId);
+    input.setAttribute('autocomplete', 'off');
+    var list = document.createElement('datalist');
+    list.id = listId;
+    var values = categoryList(type);
+    for (var i = 0; i < values.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = values[i];
+      list.appendChild(opt);
+    }
+    form.appendChild(list);
+    var hint = document.createElement('p');
+    hint.className = 'muted small-text';
+    hint.textContent = 'Start typing to search existing categories, or type a new one to create it.';
+    form.appendChild(hint);
     return input;
   }
 
@@ -2141,7 +2240,7 @@
     addTextField(form, 'edit-ingredient-name', 'Ingredient name', ing.name, 'tomato sauce');
     addTextField(form, 'edit-ingredient-collective', 'Collective/plural name', ing.collective || ing.name, 'tomato sauce');
     addTextField(form, 'edit-ingredient-icon', 'Optional icon / emoji', itemIcon(ing), '🍅');
-    addTextField(form, 'edit-ingredient-category', 'Ingredient category', ing.category || 'Ingredients', 'Staples');
+    addCategoryField(form, 'edit-ingredient-category', 'Ingredient category', ing.category || 'Ingredients', 'ingredient');
     var fs = addModalFieldset(form, 'Flavor amounts');
     var grid = document.createElement('div');
     grid.className = 'small-form-grid';
@@ -2496,7 +2595,7 @@
     var form = makeEditorForm();
     addTextField(form, 'edit-dish-name', 'Dish name', dish.name, 'spaghetti');
     addTextField(form, 'edit-dish-icon', 'Optional icon / emoji', itemIcon(dish), '🍝');
-    addTextField(form, 'edit-dish-category', 'Dish category', dish.category || 'Menu', 'Classics');
+    addCategoryField(form, 'edit-dish-category', 'Dish category', dish.category || 'Menu', 'dish');
     addSelectField(form, 'edit-dish-kind', 'Dish wording', dish.kind || 'single', [
       { value: 'single', text: 'a/an dish, like a hamburger' },
       { value: 'collective', text: 'some dish, like some pizza or spaghetti' }

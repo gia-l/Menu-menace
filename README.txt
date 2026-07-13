@@ -175,3 +175,19 @@ V14 SMARTER ORDER NOTES
 - Customers are more likely to ask to hold optional ingredients, like coffee with no milk, than to remove the main thing that makes the dish exist.
 - Substitutions show up a little more often when a dish has them.
 - Rare weird add-on orders now try to pick ingredients that share a flavor vibe with the dish when possible. So a creamy outside ingredient might show up in a coffee order because the customer is chasing a creamy idea, even if the exact ingredient is strange.
+
+
+V15 notes
+---------
+- Trends now last 7 minutes and show a small countdown in the trend card.
+- Customer dialogue avoids emojis/icons so orders read naturally, while ingredient and dish buttons can still use emojis.
+- Customers should only say “not too ___” about flavors that are actually present in the dish. If a flavor is totally absent, they may say “not ___ at all” instead.
+- Order wording was cleaned up for dishes with articles, so you should not see phrases like “for my an americano.”
+- Customer feedback has more ingredient-specific comments, including noticing a subtle ingredient or gently saying an ingredient did not quite work for them.
+
+V16 notes
+---------
+- Ingredient and dish category boxes are now search/create fields.
+- Start typing a category to reuse an existing one from the dropdown.
+- If the category does not exist yet, just type the new category name and save. The game will create it automatically.
+- This helps avoid tiny category duplicates like Breakfast vs. Breakfasts or Bread vs. Breads.

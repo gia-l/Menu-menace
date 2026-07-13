@@ -169,6 +169,25 @@ main {
   margin-bottom: 14px;
 }
 
+
+.trend-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trend-countdown {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
 .top-card, .section-heading {
   display: flex;
   justify-content: space-between;
@@ -737,4 +756,12 @@ body.theme-moon {
 .ingredient-button .muted {
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.75;
 }
