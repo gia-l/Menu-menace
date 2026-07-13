@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  var SAVE_KEY = 'menu-menace-v16-category-search';
-  var PREVIOUS_SAVE_KEYS = ['menu-menace-v14-smarter-orders', 'menu-menace-v13-food-feedback', 'menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
+  var SAVE_KEY = 'menu-menace-v19-varieties';
+  var PREVIOUS_SAVE_KEYS = ['menu-menace-v16-category-search', 'menu-menace-v14-smarter-orders', 'menu-menace-v13-food-feedback', 'menu-menace-v11-substitutions', 'menu-menace-v9-dish-flavor-editor', 'menu-menace-v8-dish-flavors', 'menu-menace-v7-dialogue-readme'];
   var VERSION = 15;
   var modalSaveHandler = null;
   var state = null;
@@ -136,12 +136,12 @@
       { id: 'fresh', descriptor: 'fresh', form: 'freshness' }
     ];
     base.ingredients = [
-      { id: 'pasta', name: 'pasta', collective: 'pasta', category: 'Staples', icon: '🍝', flavors: { savory: 80 } },
-      { id: 'tomato-sauce', name: 'tomato sauce', collective: 'tomato sauce', category: 'Sauces', icon: '🍅', flavors: { savory: 60, sweet: 30 } },
-      { id: 'herbs', name: 'herbs', collective: 'herbs', category: 'Seasonings', icon: '🌿', flavors: { fresh: 100 } }
+      { id: 'pasta', name: 'pasta', collective: 'pasta', category: 'Staples', icon: '🍝', parentId: '', flavors: { savory: 80 } },
+      { id: 'tomato-sauce', name: 'tomato sauce', collective: 'tomato sauce', category: 'Sauces', icon: '🍅', parentId: '', flavors: { savory: 60, sweet: 30 } },
+      { id: 'herbs', name: 'herbs', collective: 'herbs', category: 'Seasonings', icon: '🌿', parentId: '', flavors: { fresh: 100 } }
     ];
     base.dishes = [
-      { id: 'spaghetti', name: 'spaghetti', category: 'Classics', kind: 'collective', price: 20, icon: '🍝', base: ['pasta', 'tomato-sauce', 'herbs'], optional: [], substitutions: [], flavors: { savory: 48, sweet: 10, fresh: 42 } }
+      { id: 'spaghetti', name: 'spaghetti', category: 'Classics', kind: 'collective', price: 20, icon: '🍝', parentId: '', base: ['pasta', 'tomato-sauce', 'herbs'], optional: [], substitutions: [], flavors: { savory: 48, sweet: 10, fresh: 42 } }
     ];
     base.currentTrendId = 'savory';
     return base;
@@ -324,6 +324,7 @@
       if (!base.ingredients[g].collective) base.ingredients[g].collective = base.ingredients[g].name;
       if (!base.ingredients[g].category) base.ingredients[g].category = 'Ingredients';
       if (typeof base.ingredients[g].icon !== 'string') base.ingredients[g].icon = '';
+      if (typeof base.ingredients[g].parentId !== 'string') base.ingredients[g].parentId = '';
       if (!base.ingredients[g].flavors || typeof base.ingredients[g].flavors !== 'object') base.ingredients[g].flavors = {};
     }
 
@@ -333,6 +334,7 @@
       if (!base.dishes[d].category) base.dishes[d].category = 'Menu';
       if (!base.dishes[d].kind) base.dishes[d].kind = 'single';
       if (typeof base.dishes[d].icon !== 'string') base.dishes[d].icon = '';
+      if (typeof base.dishes[d].parentId !== 'string') base.dishes[d].parentId = '';
       if (!Array.isArray(base.dishes[d].base)) base.dishes[d].base = [];
       if (!Array.isArray(base.dishes[d].optional)) base.dishes[d].optional = [];
       if (!Array.isArray(base.dishes[d].substitutions)) base.dishes[d].substitutions = [];
@@ -392,6 +394,8 @@
     on('add-flavor', 'click', addFlavor);
     on('add-ingredient', 'click', addIngredient);
     on('add-dish', 'click', addDish);
+    on('new-ingredient-variety-of', 'change', applyNewIngredientVarietyDefaults);
+    on('new-dish-variety-of', 'change', applyNewDishVarietyDefaults);
     on('analyze-new-dish', 'click', analyzeNewDishFlavorProfile);
     on('add-substitution', 'click', addNewSubstitution);
     on('export-save', 'click', exportSave);
@@ -470,6 +474,16 @@
   function sanitizeStateAfterChanges() {
     var ingredientIds = state.ingredients.map(function (item) { return item.id; });
     var dishIds = state.dishes.map(function (item) { return item.id; });
+
+    for (var pi = 0; pi < state.ingredients.length; pi++) {
+      if (state.ingredients[pi].parentId && ingredientIds.indexOf(state.ingredients[pi].parentId) === -1) state.ingredients[pi].parentId = '';
+      if (state.ingredients[pi].parentId === state.ingredients[pi].id) state.ingredients[pi].parentId = '';
+    }
+
+    for (var di = 0; di < state.dishes.length; di++) {
+      if (state.dishes[di].parentId && dishIds.indexOf(state.dishes[di].parentId) === -1) state.dishes[di].parentId = '';
+      if (state.dishes[di].parentId === state.dishes[di].id) state.dishes[di].parentId = '';
+    }
 
     for (var i = 0; i < state.dishes.length; i++) {
       state.dishes[i].base = unique((state.dishes[i].base || []).filter(function (id) { return ingredientIds.indexOf(id) !== -1; }));
@@ -843,6 +857,40 @@
 
   function dishLabel(dish) {
     return dish ? withIcon(itemIcon(dish), dish.name) : 'mystery dish';
+  }
+
+  function isIngredientVariety(ing) {
+    return !!(ing && ing.parentId && getIngredient(ing.parentId));
+  }
+
+  function isDishVariety(dish) {
+    return !!(dish && dish.parentId && getDish(dish.parentId));
+  }
+
+  function varietyOfText(type, item) {
+    if (!item || !item.parentId) return '';
+    if (type === 'ingredient') {
+      var parentIng = getIngredient(item.parentId);
+      return parentIng ? 'Variety of ' + ingredientLabel(parentIng.id, false) : '';
+    }
+    var parentDish = getDish(item.parentId);
+    return parentDish ? 'Variety of ' + dishLabel(parentDish) : '';
+  }
+
+  function varietyOptions(type, currentId) {
+    var items = type === 'dish' ? state.dishes : state.ingredients;
+    var fallback = type === 'dish' ? 'No parent dish' : 'No parent ingredient';
+    var opts = [{ value: '', text: fallback }];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].id === currentId) continue;
+      opts.push({ value: items[i].id, text: (type === 'dish' ? dishLabel(items[i]) : ingredientLabel(items[i].id, false)) });
+    }
+    return opts;
+  }
+
+  function selectedOptionValue(id) {
+    var el = $(id);
+    return el ? el.value : '';
   }
 
   function articleFor(word) {
@@ -1243,7 +1291,7 @@
     var substitutionNames = (dish.substitutions || []).map(function (sub) { return substitutionText(sub); }).join(', ');
     var stats = dishStat(dish.id);
     var ideal = idealDishPrice(dish);
-    body.innerHTML = '<p><strong>Wording:</strong> ' + escapeHTML(dishPhrase(dish)) + '</p>' +
+    body.innerHTML = (varietyOfText('dish', dish) ? '<p class="muted small-text">' + escapeHTML(varietyOfText('dish', dish)) + '</p>' : '') + '<p><strong>Wording:</strong> ' + escapeHTML(dishPhrase(dish)) + '</p>' +
       '<p><strong>Price:</strong> ' + escapeHTML(String(dish.price)) + ' coins <span class="price-pill ' + priceVibe(dish.price, ideal) + '">' + escapeHTML(priceHintText(dish.price, ideal)) + '</span></p>' +
       '<p><strong>Hearts:</strong> ' + escapeHTML(String(stats.hearts || 0)) + ' • <strong>Served:</strong> ' + escapeHTML(String(stats.served || 0)) + '</p>' +
       '<p><strong>Flavor profile:</strong> ' + escapeHTML(flavorSummary(dishFlavorProfile(dish))) + '</p>' +
@@ -1930,6 +1978,7 @@
     renderIngredientManageList();
     renderDishIngredientChecks();
     renderDishManageList();
+    renderVarietySelects();
     updateNewDishPriceHint();
     renderDishSlotWarning(false);
   }
@@ -2013,6 +2062,63 @@
   function renderCategoryOptionLists() {
     fillDatalist('ingredient-category-options', categoryList('ingredient'));
     fillDatalist('dish-category-options', categoryList('dish'));
+  }
+
+  function fillVarietySelect(selectId, type, currentValue, currentId) {
+    var select = $(selectId);
+    if (!select) return;
+    var old = currentValue === undefined ? select.value : currentValue;
+    select.innerHTML = '';
+    var opts = varietyOptions(type, currentId || '');
+    for (var i = 0; i < opts.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = opts[i].value;
+      opt.textContent = opts[i].text;
+      if (opts[i].value === old) opt.selected = true;
+      select.appendChild(opt);
+    }
+  }
+
+  function renderVarietySelects() {
+    fillVarietySelect('new-ingredient-variety-of', 'ingredient');
+    fillVarietySelect('new-dish-variety-of', 'dish');
+  }
+
+  function applyFlavorInputsFromMap(selector, flavorMap) {
+    var inputs = document.querySelectorAll(selector);
+    for (var i = 0; i < inputs.length; i++) {
+      var fid = inputs[i].getAttribute('data-flavor-id');
+      inputs[i].value = flavorMap && flavorMap[fid] ? flavorMap[fid] : 0;
+    }
+  }
+
+  function applyNewIngredientVarietyDefaults() {
+    var parent = getIngredient(selectedOptionValue('new-ingredient-variety-of'));
+    if (!parent) return;
+    if (!$('new-ingredient-category').value.trim() || $('new-ingredient-category').value.trim() === 'Ingredients') $('new-ingredient-category').value = parent.category || 'Ingredients';
+    applyFlavorInputsFromMap('.new-ingredient-flavor', parent.flavors || {});
+    showStatus('Copied the base flavor profile from ' + ingredientName(parent.id, false) + '. You can tweak it before saving.');
+  }
+
+  function setCheckedValues(selector, values) {
+    values = values || [];
+    var checks = document.querySelectorAll(selector);
+    for (var i = 0; i < checks.length; i++) checks[i].checked = values.indexOf(checks[i].value) !== -1;
+  }
+
+  function applyNewDishVarietyDefaults() {
+    var parent = getDish(selectedOptionValue('new-dish-variety-of'));
+    if (!parent) return;
+    if (!$('new-dish-category').value.trim()) $('new-dish-category').value = parent.category || 'Menu';
+    $('new-dish-kind').value = parent.kind || 'single';
+    $('new-dish-price').value = parent.price || 25;
+    setCheckedValues('.base-ingredient-check', parent.base || []);
+    setCheckedValues('.optional-ingredient-check', parent.optional || []);
+    newDishSubstitutions = (parent.substitutions || []).map(function (sub) { return { from: sub.from, to: sub.to }; });
+    renderNewSubstitutionList();
+    renderFlavorProfileEditor($('new-dish-flavor-profile'), dishFlavorProfile(parent), 'new-dish-flavor-input');
+    updateNewDishPriceHint();
+    showStatus('Copied the recipe setup from ' + dishPlain(parent) + '. Rename it and tweak whatever is different.');
   }
 
   function addCategoryField(form, id, labelText, value, type) {
@@ -2209,6 +2315,7 @@
     var collective = $('new-ingredient-collective').value.trim() || name;
     var icon = $('new-ingredient-icon').value.trim();
     var category = $('new-ingredient-category').value.trim() || 'Ingredients';
+    var parentId = selectedOptionValue('new-ingredient-variety-of');
     if (!name) {
       showStatus('Name the ingredient first.');
       return;
@@ -2220,15 +2327,19 @@
       var amount = Number(inputs[i].value) || 0;
       if (amount > 0) flavors[inputs[i].getAttribute('data-flavor-id')] = amount;
     }
+    if (Object.keys(flavors).length === 0 && parentId && getIngredient(parentId)) {
+      flavors = Object.assign({}, getIngredient(parentId).flavors || {});
+    }
     if (Object.keys(flavors).length === 0) {
       showStatus('Give the ingredient at least one flavor amount.');
       return;
     }
-    state.ingredients.push({ id: id, name: name, collective: collective, category: category, icon: icon, flavors: flavors });
+    state.ingredients.push({ id: id, name: name, collective: collective, category: category, icon: icon, parentId: parentId, flavors: flavors });
     $('new-ingredient-name').value = '';
     $('new-ingredient-collective').value = '';
     $('new-ingredient-icon').value = '';
-    saveAndRender('Ingredient added.');
+    if ($('new-ingredient-variety-of')) $('new-ingredient-variety-of').value = '';
+    saveAndRender(parentId ? 'Ingredient variety added.' : 'Ingredient added.');
   }
 
   function renderIngredientManageList() {
@@ -2253,7 +2364,9 @@
   function makeIngredientManageItem(ing) {
     var div = document.createElement('div');
     div.className = 'manage-item';
-    div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(ingredientLabel(ing.id, false)) + '</strong><br><span class="muted">' + escapeHTML(flavorSummary(ing.flavors)) + '</span></div>';
+    var varietyText = varietyOfText('ingredient', ing);
+    var meta = (varietyText ? varietyText + ' • ' : '') + flavorSummary(ing.flavors);
+    div.innerHTML = '<div class="manage-main"><strong>' + escapeHTML(ingredientLabel(ing.id, false)) + '</strong><br><span class="muted">' + escapeHTML(meta) + '</span></div>';
     var actions = document.createElement('div');
     actions.className = 'manage-actions';
     var edit = document.createElement('button');
@@ -2283,6 +2396,7 @@
     addTextField(form, 'edit-ingredient-collective', 'Collective/plural name', ing.collective || ing.name, 'tomato sauce');
     addTextField(form, 'edit-ingredient-icon', 'Optional icon / emoji', itemIcon(ing), '🍅');
     addCategoryField(form, 'edit-ingredient-category', 'Ingredient category', ing.category || 'Ingredients', 'ingredient');
+    addSelectField(form, 'edit-ingredient-variety-of', 'This is a variety of', ing.parentId || '', varietyOptions('ingredient', ing.id));
     var fs = addModalFieldset(form, 'Flavor amounts');
     var grid = document.createElement('div');
     grid.className = 'small-form-grid';
@@ -2306,6 +2420,7 @@
       var collective = $('edit-ingredient-collective').value.trim() || name;
       var icon = $('edit-ingredient-icon').value.trim();
       var category = $('edit-ingredient-category').value.trim() || 'Ingredients';
+      var parentId = $('edit-ingredient-variety-of').value;
       if (!name) {
         showStatus('Ingredient needs a name.');
         return;
@@ -2326,6 +2441,7 @@
       ing.collective = collective;
       ing.category = category;
       ing.icon = icon;
+      ing.parentId = parentId === ing.id ? '' : parentId;
       ing.flavors = flavors;
       closeEditor();
       saveAndRender('Ingredient updated.');
@@ -2338,6 +2454,7 @@
     var ok = window.confirm('Remove "' + ing.name + '"? It will be removed from recipes too.');
     if (!ok) return;
     state.ingredients = state.ingredients.filter(function (item) { return item.id !== id; });
+    for (var pi = 0; pi < state.ingredients.length; pi++) if (state.ingredients[pi].parentId === id) state.ingredients[pi].parentId = '';
     state.pot = state.pot.filter(function (item) { return item !== id; });
     saveAndRender('Ingredient removed.');
   }
@@ -2567,6 +2684,7 @@
     var name = $('new-dish-name').value.trim();
     var icon = $('new-dish-icon').value.trim();
     var category = $('new-dish-category').value.trim() || 'Menu';
+    var parentId = selectedOptionValue('new-dish-variety-of');
     var kind = $('new-dish-kind').value;
     var price = Math.max(1, Math.round(Number($('new-dish-price').value) || 20));
     if (!name) {
@@ -2594,15 +2712,16 @@
     var id = uniqueId(slugify(name), state.dishes.map(function (x) { return x.id; }));
     var profileContainer = $('new-dish-flavor-profile');
     var flavors = profileContainer && profileContainer.querySelector('.new-dish-flavor-input') ? profileFromInputs(profileContainer, '.new-dish-flavor-input') : finalFlavorProfile(base);
-    state.dishes.push({ id: id, name: name, category: category, kind: kind, price: price, icon: icon, base: base, optional: optional, substitutions: substitutions, flavors: flavors });
+    state.dishes.push({ id: id, name: name, category: category, kind: kind, price: price, icon: icon, parentId: parentId, base: base, optional: optional, substitutions: substitutions, flavors: flavors });
     $('new-dish-name').value = '';
     $('new-dish-icon').value = '';
     $('new-dish-category').value = '';
     $('new-dish-price').value = '25';
+    if ($('new-dish-variety-of')) $('new-dish-variety-of').value = '';
     newDishSubstitutions = [];
     renderNewSubstitutionList();
     if ($('new-dish-flavor-profile')) $('new-dish-flavor-profile').innerHTML = '<p class="muted small-text">Pick recipe ingredients, then tap Analyze flavor profile.</p>';
-    saveAndRender('Dish added to the menu.');
+    saveAndRender(parentId ? 'Dish variety added to the menu.' : 'Dish added to the menu.');
   }
 
   function checkedValues(selector) {
@@ -2638,6 +2757,7 @@
     addTextField(form, 'edit-dish-name', 'Dish name', dish.name, 'spaghetti');
     addTextField(form, 'edit-dish-icon', 'Optional icon / emoji', itemIcon(dish), '🍝');
     addCategoryField(form, 'edit-dish-category', 'Dish category', dish.category || 'Menu', 'dish');
+    addSelectField(form, 'edit-dish-variety-of', 'This is a variety of', dish.parentId || '', varietyOptions('dish', dish.id));
     addSelectField(form, 'edit-dish-kind', 'Dish wording', dish.kind || 'single', [
       { value: 'single', text: 'a/an dish, like a hamburger' },
       { value: 'collective', text: 'some dish, like some pizza or spaghetti' }
@@ -2694,6 +2814,7 @@
       var icon = form.querySelector('#edit-dish-icon').value.trim();
       var category = form.querySelector('#edit-dish-category').value.trim() || 'Menu';
       var kind = form.querySelector('#edit-dish-kind').value === 'collective' ? 'collective' : 'single';
+      var parentId = form.querySelector('#edit-dish-variety-of').value;
       var price = Math.max(1, Math.round(Number(priceInput.value) || dish.price || 20));
       var base = checkedValuesInside(form, '.edit-dish-base-check');
       var optional = checkedValuesInside(form, '.edit-dish-optional-check').filter(function (ingId) { return base.indexOf(ingId) === -1; });
@@ -2709,6 +2830,7 @@
       dish.name = name;
       dish.category = category;
       dish.icon = icon;
+      dish.parentId = parentId === dish.id ? '' : parentId;
       dish.kind = kind;
       dish.price = price;
       dish.base = base;
@@ -2745,6 +2867,7 @@
     var ok = window.confirm('Remove "' + dish.name + '" from the menu?');
     if (!ok) return;
     state.dishes = state.dishes.filter(function (item) { return item.id !== id; });
+    for (var dp = 0; dp < state.dishes.length; dp++) if (state.dishes[dp].parentId === id) state.dishes[dp].parentId = '';
     if (state.dishStats) delete state.dishStats[id];
     if (state.currentOrder && state.currentOrder.dishId === id) {
       state.currentOrder = null;

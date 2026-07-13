@@ -161,6 +161,12 @@
               <datalist id="ingredient-category-options"></datalist>
               <span class="field-hint">Search existing categories, or type a new one.</span>
             </label>
+            <label>This is a variety of
+              <select id="new-ingredient-variety-of">
+                <option value="">No parent ingredient</option>
+              </select>
+              <span class="field-hint">Optional: use this for cheddar as a variety of cheese, or beef broth as a variety of broth.</span>
+            </label>
           </div>
           <fieldset>
             <legend>Flavor amounts</legend>
@@ -184,6 +190,12 @@
               <input id="new-dish-category" type="text" placeholder="Search or create a category" list="dish-category-options" autocomplete="off">
               <datalist id="dish-category-options"></datalist>
               <span class="field-hint">Search existing categories, or type a new one.</span>
+            </label>
+            <label>This is a variety of
+              <select id="new-dish-variety-of">
+                <option value="">No parent dish</option>
+              </select>
+              <span class="field-hint">Optional: use this for penne Alfredo as a variety of pasta Alfredo.</span>
             </label>
             <label>Dish wording
               <select id="new-dish-kind">

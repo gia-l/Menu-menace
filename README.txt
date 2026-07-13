@@ -69,12 +69,34 @@ A dish has:
 - a price
 - base ingredients
 - optional ingredients
+- substitutions
+- an optional parent dish if it is a variety
 
-Base ingredients are normally required. Optional ingredients are things customers may ask to add, remove, or make extra.
+Base ingredients are normally required. Optional ingredients are things customers may ask to add, remove, or make extra. Substitutions are optional swaps customers may request, like espresso instead of drip coffee or flour tortilla instead of corn tortilla.
 
 If a customer asks for extra pickles, put pickles in the pot twice.
 If a customer asks for no herbs, do not put herbs in the pot.
 If a customer asks for a weird add-on, the dialogue should make it clear that the request is strange on purpose.
+
+
+VARIETIES
+Varieties are optional parent/child links for ingredients and dishes. They help your restaurant stay organized when one general thing has more specific versions.
+
+Ingredient examples:
+- cheese can have varieties like cheddar, mozzarella, pepper jack, or vegan cheese.
+- broth can have varieties like chicken broth, beef broth, veggie broth, or mushroom broth.
+- tortilla can have varieties like corn tortilla, flour tortilla, crispy shell, or blue corn tortilla.
+
+When you make a new ingredient variety, choose "This is a variety of" and pick the parent ingredient. Menu Menace copies the parent ingredient's flavor profile as a starting point, then you can tweak it. For example, cheddar can start like cheese, then become stronger or sharper. Mozzarella can start like cheese, then become creamier and lighter.
+
+Dish examples:
+- pasta Alfredo can have varieties like penne Alfredo, herb Alfredo, mushroom Alfredo, or dragonfire Alfredo.
+- coffee can have varieties like drip coffee, latte, americano, mocha, or iced coffee.
+- soup can have varieties like chicken noodle soup, veggie soup, moon broth soup, or spicy lava soup.
+
+When you make a dish variety, choose "This is a variety of" and pick the parent dish. Menu Menace copies the parent dish's recipe setup, optional ingredients, substitutions, price, wording, and flavor profile as a starting point. Rename it and change whatever makes the variety different.
+
+Substitutions work really nicely with varieties. For example, a taco can let customers swap corn tortilla for flour tortilla, or soup can let customers swap chicken broth for beef broth.
 
 PRICING
 Each dish has an ideal price based on its ingredients. The price helper tells you whether a dish feels like:
